@@ -38,6 +38,19 @@
 
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
+        nav {
+            background: #161b22; padding: 15px 20px; margin-bottom: 20px;
+            border-radius: 8px; border: 1px solid #30363d;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        nav a {
+            color: #58a6ff; text-decoration: none; margin-right: 20px;
+            padding: 8px 16px; border-radius: 6px; transition: background 0.2s;
+        }
+        nav a:hover { background: #21262d; }
+        nav a.active { background: #238636; color: white; }
+        nav .title { font-weight: bold; font-size: 18px; color: #c9d1d9; }
+
         header {
             background: linear-gradient(135deg, #238636 0%, #1f6feb 100%);
             padding: 30px 20px; margin-bottom: 30px; border-radius: 12px;
@@ -119,6 +132,14 @@
     </div>
 
     <div class="container hidden" id="dashboard">
+        <nav>
+            <span class="title">T3 Dosing Dashboard</span>
+            <div>
+                <a href="data-explorer.html">Data Explorer</a>
+                <a href="index.html" class="active">Analysis</a>
+            </div>
+        </nav>
+
         <header>
             <h1>T3 Dosing Analysis Dashboard</h1>
             <p>Wearable Physiological Signature Analysis | Patient: Ariel | Updated: Jan 29, 2026</p>

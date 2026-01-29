@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T3 Dosing Data Explorer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+        .password-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #0d1117;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .password-box {
+            background: #161b22; padding: 40px; border-radius: 12px;
+            border: 1px solid #30363d; text-align: center;
+        }
+        .password-box h2 { margin-bottom: 20px; color: #58a6ff; }
+        .password-box input {
+            padding: 12px 20px; font-size: 16px; border-radius: 6px;
+            border: 1px solid #30363d; background: #0d1117; color: #c9d1d9;
+            margin-right: 10px;
+        }
+        .password-box button {
+            padding: 12px 24px; font-size: 16px; border-radius: 6px;
+            border: none; background: #238636; color: white; cursor: pointer;
+        }
+        .password-box button:hover { background: #2ea043; }
+        .hidden { display: none !important; }
+
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+
+        nav {
+            background: #161b22; padding: 15px 20px; margin-bottom: 20px;
+            border-radius: 8px; border: 1px solid #30363d;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        nav a {
+            color: #58a6ff; text-decoration: none; margin-right: 20px;
+            padding: 8px 16px; border-radius: 6px; transition: background 0.2s;
+        }
+        nav a:hover { background: #21262d; }
+        nav a.active { background: #238636; color: white; }
+        nav .title { font-weight: bold; font-size: 18px; color: #c9d1d9; }
+
+        header {
+            background: linear-gradient(135deg, #1f6feb 0%, #238636 100%);
+            padding: 30px 20px; margin-bottom: 30px; border-radius: 12px;
+        }
+        header h1 { font-size: 24px; margin-bottom: 8px; }
+        header p { opacity: 0.9; font-size: 14px; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px; margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #161b22; padding: 16px; border-radius: 8px;
+            border: 1px solid #30363d; text-align: center;
+        }
+        .stat-card .value { font-size: 24px; font-weight: bold; color: #58a6ff; }
+        .stat-card .label { font-size: 12px; color: #8b949e; margin-top: 4px; }
+
+        .section { margin-bottom: 30px; }
+        .section-title {
+            font-size: 18px; color: #58a6ff; margin-bottom: 15px;
+            padding-bottom: 10px; border-bottom: 1px solid #30363d;
+        }
+
+        .chart-container {
+            background: #161b22; padding: 20px; border-radius: 12px;
+            border: 1px solid #30363d; margin-bottom: 20px;
+        }
+        .chart-container h3 { font-size: 14px; margin-bottom: 10px; color: #8b949e; }
+        .chart-wrapper { height: 200px; }
+
+        .timeline-chart { height: 120px; }
+
+        .legend-row {
+            display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px;
+            font-size: 12px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+        .protocol-bands {
+            background: #161b22; padding: 20px; border-radius: 12px;
+            border: 1px solid #30363d; margin-bottom: 20px;
+        }
+        .protocol-band {
+            display: flex; align-items: center; padding: 10px;
+            border-radius: 6px; margin-bottom: 8px;
+        }
+        .protocol-color { width: 16px; height: 16px; border-radius: 4px; margin-right: 12px; }
+        .protocol-info { flex: 1; }
+        .protocol-dates { font-size: 12px; color: #8b949e; }
+        .protocol-dose { font-weight: bold; }
+        .protocol-feeling { font-size: 12px; color: #8b949e; margin-top: 4px; }
+
+        .data-table-container {
+            background: #161b22; border-radius: 12px; border: 1px solid #30363d;
+            overflow: hidden;
+        }
+        .table-controls {
+            padding: 15px; border-bottom: 1px solid #30363d;
+            display: flex; gap: 15px; flex-wrap: wrap; align-items: center;
+        }
+        .table-controls label { font-size: 13px; color: #8b949e; }
+        .table-controls select, .table-controls input {
+            padding: 8px 12px; border-radius: 6px; border: 1px solid #30363d;
+            background: #0d1117; color: #c9d1d9; font-size: 13px;
+        }
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 12px;
+        }
+        .data-table th, .data-table td {
+            padding: 10px 12px; text-align: left; border-bottom: 1px solid #30363d;
+        }
+        .data-table th {
+            background: #21262d; color: #8b949e; font-weight: 600;
+            position: sticky; top: 0;
+        }
+        .data-table tr:hover { background: #21262d; }
+        .data-table .check { color: #3fb950; }
+        .data-table .x { color: #f85149; }
+        .phase-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 10px; font-weight: 600;
+        }
+        .phase-menstrual { background: #f8514933; color: #f85149; }
+        .phase-follicular { background: #58a6ff33; color: #58a6ff; }
+        .phase-ovulatory { background: #a371f733; color: #a371f7; }
+        .phase-luteal { background: #f778ba33; color: #f778ba; }
+
+        .table-scroll { max-height: 600px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="password-overlay" id="passwordOverlay">
+        <div class="password-box">
+            <h2>T3 Data Explorer</h2>
+            <p style="margin-bottom: 20px; color: #8b949e;">Enter password to view</p>
+            <input type="password" id="passwordInput" placeholder="Password" onkeypress="if(event.key==='Enter')checkPassword()">
+            <button onclick="checkPassword()">View</button>
+        </div>
+    </div>
+
+    <div class="container hidden" id="dashboard">
+        <nav>
+            <span class="title">T3 Dosing Dashboard</span>
+            <div>
+                <a href="data-explorer.html" class="active">Data Explorer</a>
+                <a href="index.html">Analysis</a>
+            </div>
+        </nav>
+
+        <header>
+            <h1>Unified Data Explorer</h1>
+            <p>All data sources merged by date: Whoop (HR, HRV, Sleep, Recovery) + Medications + Protocol Periods + Menstrual Cycle</p>
+        </header>
+
+        <div class="stats-grid" id="statsGrid">
+            <!-- Filled by JS -->
+        </div>
+
+        <!-- Protocol Periods -->
+        <div class="section">
+            <h2 class="section-title">Protocol Periods (Dose Regimens)</h2>
+            <div class="protocol-bands" id="protocolBands">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- Timeline Charts -->
+        <div class="section">
+            <h2 class="section-title">Daily Data Timeline</h2>
+
+            <div class="chart-container">
+                <h3>Heart Rate (Daily Min/Mean/Max)</h3>
+                <div class="chart-wrapper timeline-chart">
+                    <canvas id="hrTimelineChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Recovery Score & HRV</h3>
+                <div class="chart-wrapper timeline-chart">
+                    <canvas id="recoveryTimelineChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Sleep Duration (hours)</h3>
+                <div class="chart-wrapper timeline-chart">
+                    <canvas id="sleepTimelineChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Data Coverage</h3>
+                <div class="chart-wrapper timeline-chart">
+                    <canvas id="coverageChart"></canvas>
+                </div>
+                <div class="legend-row">
+                    <div class="legend-item"><span class="legend-dot" style="background: #238636;"></span> Whoop Data</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: #58a6ff;"></span> Medication Data</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: #a371f7;"></span> HR Data</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: #f778ba;"></span> Menstrual Phase</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="section">
+            <h2 class="section-title">Daily Records</h2>
+            <div class="data-table-container">
+                <div class="table-controls">
+                    <label>Filter by Protocol:
+                        <select id="protocolFilter" onchange="filterTable()">
+                            <option value="">All Periods</option>
+                        </select>
+                    </label>
+                    <label>Filter by Data:
+                        <select id="dataFilter" onchange="filterTable()">
+                            <option value="">All Days</option>
+                            <option value="whoop">Has Whoop</option>
+                            <option value="meds">Has Medications</option>
+                            <option value="hr">Has HR Data</option>
+                            <option value="complete">Complete Data</option>
+                        </select>
+                    </label>
+                    <label>Date Range:
+                        <input type="date" id="startDate" onchange="filterTable()">
+                        to
+                        <input type="date" id="endDate" onchange="filterTable()">
+                    </label>
+                    <span id="recordCount" style="color: #8b949e; font-size: 13px;"></span>
+                </div>
+                <div class="table-scroll">
+                    <table class="data-table" id="dataTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Protocol</th>
+                                <th>Menstrual</th>
+                                <th>T3 Total</th>
+                                <th>Recovery</th>
+                                <th>RHR</th>
+                                <th>HRV</th>
+                                <th>Sleep</th>
+                                <th>HR Min</th>
+                                <th>HR Mean</th>
+                                <th>HR Max</th>
+                                <th>Vyvanse</th>
+                                <th>Whoop</th>
+                                <th>Meds</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Will be populated with actual data
+        let unifiedData = null;
+
+        function checkPassword() {
+            const input = document.getElementById('passwordInput').value;
+            if (input === 'ariel') {
+                document.getElementById('passwordOverlay').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                loadData();
+            } else {
+                alert('Incorrect password');
+            }
+        }
+
+        async function loadData() {
+            // For now, embed the data inline. In production, fetch from JSON file.
+            // We'll load the unified_daily.json data
+            try {
+                const response = await fetch('unified_daily.json');
+                unifiedData = await response.json();
+                initDashboard();
+            } catch (e) {
+                console.error('Failed to load data:', e);
+                document.getElementById('statsGrid').innerHTML = '<p style="color: #f85149;">Failed to load data. Make sure unified_daily.json is present.</p>';
+            }
+        }
+
+        function initDashboard() {
+            if (!unifiedData) return;
+
+            const meta = unifiedData.metadata;
+            const records = unifiedData.daily_records;
+
+            // Stats
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-card"><div class="value">${meta.total_days}</div><div class="label">Total Days</div></div>
+                <div class="stat-card"><div class="value">${meta.with_whoop_data}</div><div class="label">With Whoop</div></div>
+                <div class="stat-card"><div class="value">${meta.with_medication_data}</div><div class="label">With Meds</div></div>
+                <div class="stat-card"><div class="value">${meta.with_hr_data}</div><div class="label">With HR Data</div></div>
+                <div class="stat-card"><div class="value">${meta.with_menstrual_phase}</div><div class="label">With Phase</div></div>
+                <div class="stat-card"><div class="value">${meta.protocol_periods.length}</div><div class="label">Protocols</div></div>
+            `;
+
+            // Protocol bands
+            const colors = ['#f85149', '#f0883e', '#d29922', '#3fb950', '#58a6ff', '#a371f7', '#f778ba'];
+            let protocolHTML = '';
+            meta.protocol_periods.forEach((p, i) => {
+                const color = colors[i % colors.length];
+                protocolHTML += `
+                    <div class="protocol-band" style="background: ${color}22;">
+                        <div class="protocol-color" style="background: ${color};"></div>
+                        <div class="protocol-info">
+                            <div class="protocol-dates">${p.start} to ${p.end}</div>
+                            <div class="protocol-dose">${p.label}</div>
+                            <div class="protocol-feeling">${p.feeling}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('protocolBands').innerHTML = protocolHTML;
+
+            // Protocol filter
+            const protocolFilter = document.getElementById('protocolFilter');
+            meta.protocol_periods.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.label;
+                opt.textContent = p.label;
+                protocolFilter.appendChild(opt);
+            });
+
+            // Date range
+            const dates = records.map(r => r.date);
+            document.getElementById('startDate').value = dates[0];
+            document.getElementById('endDate').value = dates[dates.length - 1];
+
+            // Charts
+            initCharts(records);
+
+            // Table
+            populateTable(records);
+        }
+
+        function initCharts(records) {
+            const ctx1 = document.getElementById('hrTimelineChart').getContext('2d');
+            const ctx2 = document.getElementById('recoveryTimelineChart').getContext('2d');
+            const ctx3 = document.getElementById('sleepTimelineChart').getContext('2d');
+            const ctx4 = document.getElementById('coverageChart').getContext('2d');
+
+            const dates = records.map(r => r.date);
+            const hrMin = records.map(r => r.hr_min);
+            const hrMean = records.map(r => r.hr_mean);
+            const hrMax = records.map(r => r.hr_max);
+            const recovery = records.map(r => r.recovery_score);
+            const hrv = records.map(r => r.hrv_ms);
+            const sleep = records.map(r => r.sleep_duration_hours);
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true, labels: { color: '#8b949e', boxWidth: 10, font: { size: 10 } } } },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b949e' }, grid: { color: '#30363d' } },
+                    y: { ticks: { color: '#8b949e' }, grid: { color: '#30363d' } }
+                }
+            };
+
+            // HR Timeline
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        { label: 'HR Min', data: hrMin, borderColor: '#3fb950', backgroundColor: '#3fb95022', fill: false, pointRadius: 0, tension: 0.3 },
+                        { label: 'HR Mean', data: hrMean, borderColor: '#58a6ff', backgroundColor: '#58a6ff22', fill: false, pointRadius: 0, tension: 0.3 },
+                        { label: 'HR Max', data: hrMax, borderColor: '#f85149', backgroundColor: '#f8514922', fill: false, pointRadius: 0, tension: 0.3 },
+                    ]
+                },
+                options: commonOptions
+            });
+
+            // Recovery Timeline
+            new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        { label: 'Recovery %', data: recovery, borderColor: '#3fb950', fill: false, pointRadius: 0, tension: 0.3, yAxisID: 'y' },
+                        { label: 'HRV (ms)', data: hrv, borderColor: '#a371f7', fill: false, pointRadius: 0, tension: 0.3, yAxisID: 'y1' },
+                    ]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b949e' }, grid: { color: '#30363d' } },
+                        y: { type: 'linear', position: 'left', ticks: { color: '#3fb950' }, grid: { color: '#30363d' }, title: { display: true, text: 'Recovery %', color: '#3fb950' } },
+                        y1: { type: 'linear', position: 'right', ticks: { color: '#a371f7' }, grid: { drawOnChartArea: false }, title: { display: true, text: 'HRV ms', color: '#a371f7' } }
+                    }
+                }
+            });
+
+            // Sleep Timeline
+            new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        { label: 'Sleep Hours', data: sleep, backgroundColor: '#58a6ff66', borderColor: '#58a6ff', borderWidth: 0 }
+                    ]
+                },
+                options: {
+                    ...commonOptions,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Coverage Chart
+            new Chart(ctx4, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Whoop',
+                            data: records.filter(r => r.has_whoop_data).map(r => ({x: r.date, y: 4})),
+                            backgroundColor: '#238636', pointRadius: 2
+                        },
+                        {
+                            label: 'Meds',
+                            data: records.filter(r => r.has_medication_data).map(r => ({x: r.date, y: 3})),
+                            backgroundColor: '#58a6ff', pointRadius: 2
+                        },
+                        {
+                            label: 'HR',
+                            data: records.filter(r => r.has_hr_data).map(r => ({x: r.date, y: 2})),
+                            backgroundColor: '#a371f7', pointRadius: 2
+                        },
+                        {
+                            label: 'Phase',
+                            data: records.filter(r => r.menstrual_phase).map(r => ({x: r.date, y: 1})),
+                            backgroundColor: '#f778ba', pointRadius: 2
+                        },
+                    ]
+                },
+                options: {
+                    ...commonOptions,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b949e' }, grid: { color: '#30363d' } },
+                        y: { min: 0, max: 5, ticks: { display: false }, grid: { color: '#30363d' } }
+                    }
+                }
+            });
+        }
+
+        function populateTable(records) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            records.forEach(r => {
+                const phaseClass = r.menstrual_phase ? `phase-${r.menstrual_phase.toLowerCase()}` : '';
+                const phaseText = r.menstrual_phase || '-';
+
+                const row = document.createElement('tr');
+                row.dataset.record = JSON.stringify(r);
+                row.innerHTML = `
+                    <td>${r.date}</td>
+                    <td>${r.protocol_period || '-'}</td>
+                    <td>${r.menstrual_phase ? `<span class="phase-badge ${phaseClass}">${phaseText}</span>` : '-'}</td>
+                    <td>${r.t3_total_mcg || '-'}</td>
+                    <td>${r.recovery_score || '-'}</td>
+                    <td>${r.rhr || '-'}</td>
+                    <td>${r.hrv_ms ? r.hrv_ms.toFixed(1) : '-'}</td>
+                    <td>${r.sleep_duration_hours ? r.sleep_duration_hours.toFixed(1) : '-'}</td>
+                    <td>${r.hr_min || '-'}</td>
+                    <td>${r.hr_mean || '-'}</td>
+                    <td>${r.hr_max || '-'}</td>
+                    <td>${r.vyvanse_taken ? '<span class="check">✓</span>' : ''}</td>
+                    <td>${r.has_whoop_data ? '<span class="check">✓</span>' : '<span class="x">✗</span>'}</td>
+                    <td>${r.has_medication_data ? '<span class="check">✓</span>' : '<span class="x">✗</span>'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('recordCount').textContent = `${records.length} records`;
+        }
+
+        function filterTable() {
+            if (!unifiedData) return;
+
+            let records = unifiedData.daily_records;
+
+            const protocolFilter = document.getElementById('protocolFilter').value;
+            const dataFilter = document.getElementById('dataFilter').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (protocolFilter) {
+                records = records.filter(r => r.protocol_period === protocolFilter);
+            }
+
+            if (dataFilter === 'whoop') {
+                records = records.filter(r => r.has_whoop_data);
+            } else if (dataFilter === 'meds') {
+                records = records.filter(r => r.has_medication_data);
+            } else if (dataFilter === 'hr') {
+                records = records.filter(r => r.has_hr_data);
+            } else if (dataFilter === 'complete') {
+                records = records.filter(r => r.has_whoop_data && r.has_medication_data && r.has_hr_data);
+            }
+
+            if (startDate) {
+                records = records.filter(r => r.date >= startDate);
+            }
+            if (endDate) {
+                records = records.filter(r => r.date <= endDate);
+            }
+
+            populateTable(records);
+        }
+    </script>
+</body>
+</html>
