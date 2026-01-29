@@ -1,0 +1,87 @@
+{
+  "T4=100.0, T3=0.0": {
+    "n_days": 28,
+    "t3_mcg": 0.0,
+    "feeling": "Cold mainly in hands and feet, less active, not fe",
+    "mean_overnight_rhr": 66.5,
+    "mean_deviation_bpm": 1.1,
+    "std_deviation_bpm": 5.8,
+    "pct_green": 46.4,
+    "pct_yellow": 32.1,
+    "pct_red": 21.4,
+    "alerts": {
+      "green": 13,
+      "yellow": 9,
+      "red": 6,
+      "unknown": 0
+    }
+  },
+  "T4=88.0, T3=5.0": {
+    "n_days": 61,
+    "t3_mcg": 5.0,
+    "feeling": "Clearer, better, energized and happy A+, tasted me",
+    "mean_overnight_rhr": 63.7,
+    "mean_deviation_bpm": 1.3,
+    "std_deviation_bpm": 4.3,
+    "pct_green": 50.8,
+    "pct_yellow": 34.4,
+    "pct_red": 14.8,
+    "alerts": {
+      "green": 31,
+      "yellow": 21,
+      "red": 9,
+      "unknown": 0
+    }
+  },
+  "T4=75.0, T3=10.0": {
+    "n_days": 86,
+    "t3_mcg": 10.0,
+    "feeling": "Happy clear, great dose, felt a little overstimula",
+    "mean_overnight_rhr": 63.2,
+    "mean_deviation_bpm": 0.3,
+    "std_deviation_bpm": 5.4,
+    "pct_green": 47.7,
+    "pct_yellow": 29.1,
+    "pct_red": 23.3,
+    "alerts": {
+      "green": 41,
+      "yellow": 25,
+      "red": 20,
+      "unknown": 0
+    }
+  },
+  "T4=88.0, T3=7.5": {
+    "n_days": 10,
+    "t3_mcg": 7.5,
+    "feeling": "Warm enough, overactivated, less clear",
+    "mean_overnight_rhr": 65.3,
+    "mean_deviation_bpm": 2.8,
+    "std_deviation_bpm": 4.5,
+    "pct_green": 30.0,
+    "pct_yellow": 30.0,
+    "pct_red": 40.0,
+    "alerts": {
+      "green": 3,
+      "yellow": 3,
+      "red": 4,
+      "unknown": 0
+    }
+  },
+  "T4=82.0, T3=6.25": {
+    "n_days": 29,
+    "t3_mcg": 6.25,
+    "feeling": "warm, stable, energized, less clarity of focus, ov",
+    "mean_overnight_rhr": 64.0,
+    "mean_deviation_bpm": -0.1,
+    "std_deviation_bpm": 5.2,
+    "pct_green": 58.6,
+    "pct_yellow": 24.1,
+    "pct_red": 17.2,
+    "alerts": {
+      "green": 17,
+      "yellow": 7,
+      "red": 5,
+      "unknown": 0
+    }
+  }
+}

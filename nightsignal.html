@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NightSignal T3 Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --green: #3fb950;
+            --yellow: #d29922;
+            --red: #f85149;
+            --blue: #58a6ff;
+            --purple: #a371f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        nav {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        nav a:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        nav a.active {
+            background: var(--blue);
+            color: var(--bg-primary);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .method-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .method-box h3 {
+            color: var(--blue);
+            margin-bottom: 10px;
+        }
+
+        .method-box ul {
+            margin-left: 20px;
+            color: var(--text-secondary);
+        }
+
+        .method-box li {
+            margin: 5px 0;
+        }
+
+        .method-box .highlight {
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .stat-card .label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 5px 0;
+        }
+
+        .stat-card .detail {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .green { color: var(--green); }
+        .yellow { color: var(--yellow); }
+        .red { color: var(--red); }
+        .blue { color: var(--blue); }
+
+        .chart-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container h3 {
+            margin-bottom: 15px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .protocol-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .protocol-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .protocol-card h4 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .protocol-card .feeling {
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .protocol-card .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .protocol-card .metric {
+            background: var(--bg-tertiary);
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .protocol-card .metric .label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .protocol-card .metric .value {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .alert-bar {
+            display: flex;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .alert-bar .green-bar { background: var(--green); }
+        .alert-bar .yellow-bar { background: var(--yellow); }
+        .alert-bar .red-bar { background: var(--red); }
+
+        .finding-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--green);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .finding-box h3 {
+            color: var(--green);
+            margin-bottom: 10px;
+        }
+
+        .warning-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--yellow);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .warning-box h3 {
+            color: var(--yellow);
+            margin-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .data-gap {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 15px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">Analysis</a>
+            <a href="data-explorer.html">Data Explorer</a>
+            <a href="nightsignal.html" class="active">NightSignal</a>
+        </nav>
+
+        <h1>NightSignal T3 Dose Response Detection</h1>
+        <p class="subtitle">Adapting Snyder Lab's COVID detection methodology for thyroid dosing optimization</p>
+
+        <div class="method-box">
+            <h3>Methodology (from Alavi et al., Nature Medicine 2022)</h3>
+            <ul>
+                <li><span class="highlight">Individual baseline comparison</span> - compares each person to their own 28-day rolling median</li>
+                <li><span class="highlight">Overnight RHR</span> - uses 00:00-07:00 heart rate when truly at rest</li>
+                <li><span class="highlight">Bidirectional detection</span> - elevated RHR = possible hyperthyroid, depressed RHR = possible hypothyroid</li>
+                <li><span class="highlight">State machine alerting</span> - Green (normal) → Yellow (single deviation) → Red (2+ consecutive days)</li>
+            </ul>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <!-- Populated by JS -->
+        </div>
+
+        <div class="warning-box">
+            <h3>Data Gap: STRUGGLING Period Missing</h3>
+            <p>The STRUGGLING period (Oct 18-28, 2025) when Ariel felt worst has <strong>ZERO overnight HR data</strong>. We cannot compare this period to optimal periods. This is a critical limitation.</p>
+        </div>
+
+        <div class="chart-container">
+            <h3>Overnight RHR vs Personal Baseline</h3>
+            <div class="chart-wrapper">
+                <canvas id="rhrChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3>Deviation from Baseline (bpm)</h3>
+            <div class="chart-wrapper">
+                <canvas id="deviationChart"></canvas>
+            </div>
+        </div>
+
+        <h2 style="margin: 30px 0 15px;">Results by Protocol Period</h2>
+
+        <div class="finding-box">
+            <h3>Key Finding</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Protocol</th>
+                        <th>Subjective Feeling</th>
+                        <th>RHR Deviation</th>
+                        <th>% Green Days</th>
+                        <th>Interpretation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>T4=88, T3=7.5</td>
+                        <td class="yellow">"Overactivated, less clear"</td>
+                        <td class="red">+2.8 bpm</td>
+                        <td>30%</td>
+                        <td class="red">Elevated RHR matches "overactivated" feeling</td>
+                    </tr>
+                    <tr>
+                        <td><strong>T4=82, T3=6.25</strong></td>
+                        <td class="green">"Warm, stable, energized"</td>
+                        <td class="green">-0.1 bpm</td>
+                        <td><strong>59%</strong></td>
+                        <td class="green">Most stable - RHR at baseline</td>
+                    </tr>
+                    <tr>
+                        <td>T4=75, T3=10</td>
+                        <td class="blue">"Happy clear, great dose"</td>
+                        <td>+0.3 bpm</td>
+                        <td>48%</td>
+                        <td>Near baseline</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="protocol-summary" id="protocolSummary">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <script>
+        // Load data
+        let dailySignals = [];
+        let protocolSummary = {};
+
+        async function loadData() {
+            try {
+                const [signalsRes, summaryRes] = await Promise.all([
+                    fetch('nightsignal_daily.json'),
+                    fetch('nightsignal_protocol_summary.json')
+                ]);
+
+                dailySignals = await signalsRes.json();
+                protocolSummary = await summaryRes.json();
+
+                renderStats();
+                renderCharts();
+                renderProtocolCards();
+            } catch (e) {
+                console.error('Error loading data:', e);
+            }
+        }
+
+        function renderStats() {
+            const withBaseline = dailySignals.filter(s => s.baseline_rhr !== null);
+            const alerts = { green: 0, yellow: 0, red: 0, unknown: 0 };
+            dailySignals.forEach(s => {
+                alerts[s.alert_level] = (alerts[s.alert_level] || 0) + 1;
+            });
+
+            const rhrs = withBaseline.map(s => s.overnight_rhr).filter(x => x !== null);
+            const meanRHR = rhrs.length ? (rhrs.reduce((a, b) => a + b) / rhrs.length).toFixed(1) : '-';
+
+            const deviations = withBaseline.map(s => s.deviation_bpm).filter(x => x !== null);
+            const stdDev = deviations.length > 1 ? Math.sqrt(deviations.map(x => x * x).reduce((a, b) => a + b) / deviations.length).toFixed(1) : '-';
+
+            const total = dailySignals.length;
+
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-card">
+                    <div class="label">Nights Analyzed</div>
+                    <div class="value blue">${total}</div>
+                    <div class="detail">${withBaseline.length} with valid baseline</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Mean Overnight RHR</div>
+                    <div class="value">${meanRHR}</div>
+                    <div class="detail">bpm (00:00-07:00)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Typical Deviation</div>
+                    <div class="value">±${stdDev}</div>
+                    <div class="detail">bpm from baseline</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Green Days</div>
+                    <div class="value green">${(100 * alerts.green / total).toFixed(0)}%</div>
+                    <div class="detail">${alerts.green} of ${total} nights</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Yellow Alerts</div>
+                    <div class="value yellow">${(100 * alerts.yellow / total).toFixed(0)}%</div>
+                    <div class="detail">${alerts.yellow} single-day deviations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Red Alerts</div>
+                    <div class="value red">${(100 * alerts.red / total).toFixed(0)}%</div>
+                    <div class="detail">${alerts.red} consecutive deviations</div>
+                </div>
+            `;
+        }
+
+        function renderCharts() {
+            const validData = dailySignals.filter(s => s.overnight_rhr !== null && s.baseline_rhr !== null);
+
+            // Protocol colors
+            const protocolColors = {
+                'T4=100.0, T3=0.0': 'rgba(139, 148, 158, 0.8)',
+                'T4=88.0, T3=5.0': 'rgba(88, 166, 255, 0.8)',
+                'T4=75.0, T3=10.0': 'rgba(63, 185, 80, 0.8)',
+                'T4=75.0, T3=7.5': 'rgba(248, 81, 73, 0.8)',
+                'T4=88.0, T3=7.5': 'rgba(210, 153, 34, 0.8)',
+                'T4=82.0, T3=6.25': 'rgba(163, 113, 247, 0.8)',
+            };
+
+            // RHR Chart
+            const rhrCtx = document.getElementById('rhrChart').getContext('2d');
+            new Chart(rhrCtx, {
+                type: 'line',
+                data: {
+                    labels: validData.map(d => d.date),
+                    datasets: [
+                        {
+                            label: 'Overnight RHR',
+                            data: validData.map(d => d.overnight_rhr),
+                            borderColor: 'rgba(88, 166, 255, 1)',
+                            backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: false,
+                        },
+                        {
+                            label: '28-Day Baseline',
+                            data: validData.map(d => d.baseline_rhr),
+                            borderColor: 'rgba(139, 148, 158, 1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'month' },
+                            grid: { color: 'rgba(48, 54, 61, 0.5)' },
+                            ticks: { color: '#8b949e' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Heart Rate (bpm)', color: '#8b949e' },
+                            grid: { color: 'rgba(48, 54, 61, 0.5)' },
+                            ticks: { color: '#8b949e' },
+                            min: 50,
+                            max: 80
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#f0f6fc' } }
+                    }
+                }
+            });
+
+            // Deviation Chart
+            const devCtx = document.getElementById('deviationChart').getContext('2d');
+            new Chart(devCtx, {
+                type: 'bar',
+                data: {
+                    labels: validData.map(d => d.date),
+                    datasets: [{
+                        label: 'Deviation from Baseline',
+                        data: validData.map(d => d.deviation_bpm),
+                        backgroundColor: validData.map(d => {
+                            if (d.deviation_bpm >= 4) return 'rgba(248, 81, 73, 0.8)';
+                            if (d.deviation_bpm >= 3) return 'rgba(210, 153, 34, 0.8)';
+                            if (d.deviation_bpm <= -4) return 'rgba(248, 81, 73, 0.8)';
+                            if (d.deviation_bpm <= -3) return 'rgba(210, 153, 34, 0.8)';
+                            return 'rgba(63, 185, 80, 0.8)';
+                        }),
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'month' },
+                            grid: { display: false },
+                            ticks: { color: '#8b949e' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Deviation (bpm)', color: '#8b949e' },
+                            grid: { color: 'rgba(48, 54, 61, 0.5)' },
+                            ticks: { color: '#8b949e' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                thresholdHigh: {
+                                    type: 'line',
+                                    yMin: 3,
+                                    yMax: 3,
+                                    borderColor: 'rgba(210, 153, 34, 0.5)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5],
+                                },
+                                thresholdLow: {
+                                    type: 'line',
+                                    yMin: -3,
+                                    yMax: -3,
+                                    borderColor: 'rgba(210, 153, 34, 0.5)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5],
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderProtocolCards() {
+            const container = document.getElementById('protocolSummary');
+
+            // Sort by T3 dose
+            const sorted = Object.entries(protocolSummary).sort((a, b) => a[1].t3_mcg - b[1].t3_mcg);
+
+            container.innerHTML = sorted.map(([protocol, stats]) => {
+                const devClass = stats.mean_deviation_bpm >= 2 ? 'red' :
+                                 stats.mean_deviation_bpm <= -2 ? 'blue' : 'green';
+
+                return `
+                    <div class="protocol-card">
+                        <h4>${protocol}</h4>
+                        <div class="feeling">"${stats.feeling}"</div>
+                        <div class="metrics">
+                            <div class="metric">
+                                <div class="label">Days</div>
+                                <div class="value">${stats.n_days}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="label">Mean RHR</div>
+                                <div class="value">${stats.mean_overnight_rhr || '-'}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="label">Deviation</div>
+                                <div class="value ${devClass}">${stats.mean_deviation_bpm >= 0 ? '+' : ''}${stats.mean_deviation_bpm || '-'}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="label">Std Dev</div>
+                                <div class="value">±${stats.std_deviation_bpm || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="alert-bar">
+                            <div class="green-bar" style="width: ${stats.pct_green}%"></div>
+                            <div class="yellow-bar" style="width: ${stats.pct_yellow}%"></div>
+                            <div class="red-bar" style="width: ${stats.pct_red}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
