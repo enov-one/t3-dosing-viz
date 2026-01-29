@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T3 Acute Dose Response</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --green: #3fb950;
+            --yellow: #d29922;
+            --red: #f85149;
+            --blue: #58a6ff;
+            --purple: #a371f7;
+            --orange: #f0883e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        nav {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        nav a:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        nav a.active {
+            background: var(--blue);
+            color: var(--bg-primary);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .method-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .method-box h3 {
+            color: var(--blue);
+            margin-bottom: 15px;
+        }
+
+        .method-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .method-item {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .method-item .label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .method-item .value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .stat-card .label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 5px 0;
+        }
+
+        .stat-card .detail {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .green { color: var(--green); }
+        .blue { color: var(--blue); }
+        .yellow { color: var(--yellow); }
+        .purple { color: var(--purple); }
+
+        .chart-section {
+            margin-bottom: 40px;
+        }
+
+        .chart-section h2 {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .chart-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container h3 {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .finding-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--green);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .finding-box h3 {
+            color: var(--green);
+            margin-bottom: 15px;
+        }
+
+        .finding-box table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .finding-box th, .finding-box td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .finding-box th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .pharma-timeline {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .pharma-timeline h3 {
+            color: var(--purple);
+            margin-bottom: 15px;
+        }
+
+        .timeline-bar {
+            display: flex;
+            height: 40px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .timeline-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .timeline-labels {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">Analysis</a>
+            <a href="data-explorer.html">Data Explorer</a>
+            <a href="nightsignal.html">NightSignal</a>
+            <a href="acute-response.html" class="active">Acute Response</a>
+        </nav>
+
+        <h1>T3 Acute Dose Response Analysis</h1>
+        <p class="subtitle">HR deviation from overnight baseline in the 4 hours following each T3 dose</p>
+
+        <div class="method-box">
+            <h3>Methodology</h3>
+            <div class="method-grid">
+                <div class="method-item">
+                    <div class="label">Analysis Window</div>
+                    <div class="value">-60 to +240 min</div>
+                </div>
+                <div class="method-item">
+                    <div class="label">Baseline</div>
+                    <div class="value">Overnight RHR</div>
+                </div>
+                <div class="method-item">
+                    <div class="label">Exercise Control</div>
+                    <div class="value">Excluded overlap</div>
+                </div>
+                <div class="method-item">
+                    <div class="label">Stratified By</div>
+                    <div class="value">Sleep, Cycle, Timing</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pharma-timeline">
+            <h3>T3 (Cytomel) Pharmacokinetics</h3>
+            <div class="timeline-bar">
+                <div class="timeline-segment" style="width: 12.5%; background: var(--bg-tertiary);">Absorption</div>
+                <div class="timeline-segment" style="width: 25%; background: rgba(88, 166, 255, 0.3);">Rising</div>
+                <div class="timeline-segment" style="width: 37.5%; background: rgba(88, 166, 255, 0.6);">Peak Plasma</div>
+                <div class="timeline-segment" style="width: 25%; background: rgba(88, 166, 255, 0.3);">Declining</div>
+            </div>
+            <div class="timeline-labels">
+                <span>0 min</span>
+                <span>30 min</span>
+                <span>1 hr</span>
+                <span>2 hr</span>
+                <span>4 hr</span>
+            </div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <!-- Populated by JS -->
+        </div>
+
+        <div class="finding-box">
+            <h3>Key Findings: HR Deviation by Time Window</h3>
+            <table id="windowTable">
+                <thead>
+                    <tr>
+                        <th>Time Window</th>
+                        <th>Mean Deviation</th>
+                        <th>Interpretation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="chart-section">
+            <h2>Overall Dose Response Curve (Exercise-Free)</h2>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="overallChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>Stratified by Dose Timing</h2>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="slotChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>Stratified by Prior Night Sleep</h2>
+            <div class="chart-row">
+                <div class="chart-container">
+                    <h3>Sleep Duration Groups</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="sleepChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>Stratified by Menstrual Phase</h2>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="phaseChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>Stratified by Protocol Period</h2>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="protocolChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let curves = {};
+
+        async function loadData() {
+            try {
+                const res = await fetch('acute_dose_response_curves.json');
+                curves = await res.json();
+                renderStats();
+                renderWindowTable();
+                renderCharts();
+            } catch (e) {
+                console.error('Error loading data:', e);
+            }
+        }
+
+        function renderStats() {
+            const overall = curves['overall_clean'];
+            if (!overall) return;
+
+            // Calculate stats
+            const nEvents = overall.n_events;
+            const peakIdx = overall.mean_deviation.reduce((maxIdx, val, idx, arr) =>
+                val > (arr[maxIdx] || -999) ? idx : maxIdx, 0);
+            const peakDev = overall.mean_deviation[peakIdx];
+            const peakTime = overall.offsets_min[peakIdx];
+
+            // Mean deviation at 60-120 min (expected T3 effect window)
+            let sum60_120 = 0, count60_120 = 0;
+            overall.offsets_min.forEach((offset, i) => {
+                if (offset >= 60 && offset < 120 && overall.mean_deviation[i] !== null) {
+                    sum60_120 += overall.mean_deviation[i];
+                    count60_120++;
+                }
+            });
+            const mean60_120 = count60_120 ? (sum60_120 / count60_120).toFixed(1) : '-';
+
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-card">
+                    <div class="label">Clean Events</div>
+                    <div class="value blue">${nEvents}</div>
+                    <div class="detail">Exercise-free windows</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Peak Deviation</div>
+                    <div class="value green">+${peakDev.toFixed(1)}</div>
+                    <div class="detail">bpm at ${peakTime} min</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">60-120 min Mean</div>
+                    <div class="value purple">+${mean60_120}</div>
+                    <div class="detail">bpm (expected T3 effect)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Baseline</div>
+                    <div class="value">Overnight</div>
+                    <div class="detail">RHR (00:00-07:00)</div>
+                </div>
+            `;
+        }
+
+        function renderWindowTable() {
+            const overall = curves['overall_clean'];
+            if (!overall) return;
+
+            const windows = [
+                { start: -60, end: 0, label: 'Pre-dose (-60 to 0)', interp: 'Baseline verification' },
+                { start: 0, end: 30, label: '0-30 min', interp: 'Absorption phase' },
+                { start: 30, end: 60, label: '30-60 min', interp: 'Early rising phase' },
+                { start: 60, end: 120, label: '60-120 min', interp: 'Active T3 effect' },
+                { start: 120, end: 180, label: '120-180 min', interp: 'Peak plasma window' },
+                { start: 180, end: 240, label: '180-240 min', interp: 'Late peak / plateau' },
+            ];
+
+            const tbody = document.querySelector('#windowTable tbody');
+            tbody.innerHTML = windows.map(w => {
+                let sum = 0, count = 0;
+                overall.offsets_min.forEach((offset, i) => {
+                    if (offset >= w.start && offset < w.end && overall.mean_deviation[i] !== null) {
+                        sum += overall.mean_deviation[i];
+                        count++;
+                    }
+                });
+                const mean = count ? (sum / count).toFixed(1) : '-';
+                const colorClass = mean > 5 ? 'green' : mean > 2 ? 'blue' : '';
+                return `
+                    <tr>
+                        <td>${w.label}</td>
+                        <td class="${colorClass}">${mean !== '-' ? (mean >= 0 ? '+' : '') + mean + ' bpm' : '-'}</td>
+                        <td style="color: var(--text-secondary)">${w.interp}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function createCurveDataset(curve, label, color, dash = false) {
+            return {
+                label: label,
+                data: curve.offsets_min.map((offset, i) => ({
+                    x: offset,
+                    y: curve.mean_deviation[i]
+                })).filter(d => d.y !== null),
+                borderColor: color,
+                backgroundColor: color.replace('1)', '0.1)'),
+                borderWidth: 2,
+                borderDash: dash ? [5, 5] : [],
+                pointRadius: 0,
+                tension: 0.3,
+                fill: false,
+            };
+        }
+
+        function renderCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: { display: true, text: 'Minutes from Dose', color: '#8b949e' },
+                        grid: { color: 'rgba(48, 54, 61, 0.5)' },
+                        ticks: { color: '#8b949e' },
+                        min: -60,
+                        max: 240,
+                    },
+                    y: {
+                        title: { display: true, text: 'HR Deviation from Baseline (bpm)', color: '#8b949e' },
+                        grid: { color: 'rgba(48, 54, 61, 0.5)' },
+                        ticks: { color: '#8b949e' },
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#f0f6fc' } },
+                    annotation: {
+                        annotations: {
+                            doseTime: {
+                                type: 'line',
+                                xMin: 0,
+                                xMax: 0,
+                                borderColor: 'rgba(248, 81, 73, 0.7)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: {
+                                    display: true,
+                                    content: 'Dose',
+                                    position: 'start',
+                                    color: '#f85149',
+                                }
+                            },
+                            zeroline: {
+                                type: 'line',
+                                yMin: 0,
+                                yMax: 0,
+                                borderColor: 'rgba(139, 148, 158, 0.5)',
+                                borderWidth: 1,
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Overall chart
+            if (curves['overall_clean']) {
+                const ctx = document.getElementById('overallChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            createCurveDataset(curves['overall_clean'], 'Overall (n=' + curves['overall_clean'].n_events + ')', 'rgba(88, 166, 255, 1)'),
+                        ]
+                    },
+                    options: chartOptions
+                });
+            }
+
+            // Slot chart
+            const slotCtx = document.getElementById('slotChart').getContext('2d');
+            const slotDatasets = [];
+            if (curves['slot_morning']) slotDatasets.push(createCurveDataset(curves['slot_morning'], 'Morning (n=' + curves['slot_morning'].n_events + ')', 'rgba(63, 185, 80, 1)'));
+            if (curves['slot_afternoon']) slotDatasets.push(createCurveDataset(curves['slot_afternoon'], 'Afternoon (n=' + curves['slot_afternoon'].n_events + ')', 'rgba(210, 153, 34, 1)'));
+            if (curves['slot_evening']) slotDatasets.push(createCurveDataset(curves['slot_evening'], 'Evening (n=' + curves['slot_evening'].n_events + ')', 'rgba(163, 113, 247, 1)'));
+            new Chart(slotCtx, {
+                type: 'line',
+                data: { datasets: slotDatasets },
+                options: chartOptions
+            });
+
+            // Sleep chart
+            const sleepCtx = document.getElementById('sleepChart').getContext('2d');
+            const sleepDatasets = [];
+            if (curves['sleep_poor_<6h']) sleepDatasets.push(createCurveDataset(curves['sleep_poor_<6h'], 'Poor <6h (n=' + curves['sleep_poor_<6h'].n_events + ')', 'rgba(248, 81, 73, 1)'));
+            if (curves['sleep_adequate_6-8h']) sleepDatasets.push(createCurveDataset(curves['sleep_adequate_6-8h'], '6-8h (n=' + curves['sleep_adequate_6-8h'].n_events + ')', 'rgba(210, 153, 34, 1)'));
+            if (curves['sleep_good_>8h']) sleepDatasets.push(createCurveDataset(curves['sleep_good_>8h'], 'Good >8h (n=' + curves['sleep_good_>8h'].n_events + ')', 'rgba(63, 185, 80, 1)'));
+            new Chart(sleepCtx, {
+                type: 'line',
+                data: { datasets: sleepDatasets },
+                options: chartOptions
+            });
+
+            // Phase chart
+            const phaseCtx = document.getElementById('phaseChart').getContext('2d');
+            const phaseDatasets = [];
+            if (curves['phase_FOLLICULAR']) phaseDatasets.push(createCurveDataset(curves['phase_FOLLICULAR'], 'Follicular (n=' + curves['phase_FOLLICULAR'].n_events + ')', 'rgba(88, 166, 255, 1)'));
+            if (curves['phase_LUTEAL']) phaseDatasets.push(createCurveDataset(curves['phase_LUTEAL'], 'Luteal (n=' + curves['phase_LUTEAL'].n_events + ')', 'rgba(163, 113, 247, 1)'));
+            if (curves['phase_MENSTRUAL']) phaseDatasets.push(createCurveDataset(curves['phase_MENSTRUAL'], 'Menstrual (n=' + curves['phase_MENSTRUAL'].n_events + ')', 'rgba(248, 81, 73, 1)'));
+            if (curves['phase_OVULATORY']) phaseDatasets.push(createCurveDataset(curves['phase_OVULATORY'], 'Ovulatory (n=' + curves['phase_OVULATORY'].n_events + ')', 'rgba(63, 185, 80, 1)'));
+            new Chart(phaseCtx, {
+                type: 'line',
+                data: { datasets: phaseDatasets },
+                options: chartOptions
+            });
+
+            // Protocol chart
+            const protocolCtx = document.getElementById('protocolChart').getContext('2d');
+            const protocolDatasets = [];
+            const protocolColors = ['rgba(88, 166, 255, 1)', 'rgba(63, 185, 80, 1)', 'rgba(210, 153, 34, 1)', 'rgba(163, 113, 247, 1)'];
+            let colorIdx = 0;
+            Object.keys(curves).filter(k => k.startsWith('protocol_')).forEach(key => {
+                const curve = curves[key];
+                const label = key.replace('protocol_', '');
+                protocolDatasets.push(createCurveDataset(curve, label + ' (n=' + curve.n_events + ')', protocolColors[colorIdx % protocolColors.length]));
+                colorIdx++;
+            });
+            new Chart(protocolCtx, {
+                type: 'line',
+                data: { datasets: protocolDatasets },
+                options: chartOptions
+            });
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
