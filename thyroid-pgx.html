@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thyroid Pharmacogenomics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --green: #3fb950;
+            --yellow: #d29922;
+            --red: #f85149;
+            --blue: #58a6ff;
+            --purple: #a371f7;
+            --cyan: #39c5cf;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        nav {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        nav a:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        nav a.active {
+            background: var(--cyan);
+            color: var(--bg-primary);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin: 30px 0 15px 0;
+            color: var(--blue);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border: 2px solid var(--cyan);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .hero-section h2 {
+            color: var(--cyan);
+            border: none;
+            margin-top: 0;
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .insight-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .insight-card h4 {
+            color: var(--purple);
+            margin-bottom: 10px;
+        }
+
+        .gene-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .gene-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .gene-card .gene-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .gene-card .gene-function {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .genotype-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .genotype-display .alleles {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .genotype-display .interpretation {
+            font-size: 14px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-normal { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+        .status-variant { background: rgba(210, 153, 34, 0.2); color: var(--yellow); }
+        .status-risk { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+
+        .chart-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+        }
+
+        .finding-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--green);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .finding-box h3 {
+            color: var(--green);
+        }
+
+        .warning-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--yellow);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .warning-box h3 {
+            color: var(--yellow);
+        }
+
+        .info-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--blue);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h3 {
+            color: var(--blue);
+        }
+
+        .recommendation-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--purple);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .recommendation-box h3 {
+            color: var(--purple);
+            margin-bottom: 15px;
+        }
+
+        .recommendation-list {
+            list-style: none;
+        }
+
+        .recommendation-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .recommendation-list li:last-child {
+            border-bottom: none;
+        }
+
+        .recommendation-list .icon {
+            font-size: 18px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-box .label {
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stat-box .unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .green { color: var(--green); }
+        .yellow { color: var(--yellow); }
+        .red { color: var(--red); }
+        .blue { color: var(--blue); }
+        .purple { color: var(--purple); }
+        .cyan { color: var(--cyan); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .timeline-event {
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--red);
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .timeline-event.treatment {
+            border-left-color: var(--blue);
+        }
+
+        .timeline-event .date {
+            font-weight: 600;
+            color: var(--cyan);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">Analysis</a>
+            <a href="data-explorer.html">Data Explorer</a>
+            <a href="nightsignal.html">NightSignal</a>
+            <a href="acute-response.html">Acute Response</a>
+            <a href="pharmacogenomics.html">Pharmacogenomics</a>
+            <a href="thyroid-pgx.html" class="active">Thyroid PGx</a>
+        </nav>
+
+        <h1>Thyroid Pharmacogenomics Dashboard</h1>
+        <p class="subtitle">Integrating deiodinase genetics, lab trends, and wearable response patterns | Ariel B. Ganz</p>
+
+        <!-- Hero Section: Key Insight -->
+        <div class="hero-section">
+            <h2>Personalized Thyroid Insight</h2>
+            <p style="font-size: 18px; margin-bottom: 20px;">Your genetics indicate <strong class="green">normal T4→T3 conversion capacity</strong>, but your clinical history shows significant thyroid events requiring careful monitoring.</p>
+
+            <div class="insight-grid">
+                <div class="insight-card">
+                    <h4>Genetic Profile</h4>
+                    <p><strong>DIO2 rs225014:</strong> CC (Thr/Thr) - Normal deiodinase activity</p>
+                    <p><strong>DIO1 rs2235544:</strong> CC - Normal peripheral conversion</p>
+                    <p style="margin-top: 10px; color: var(--green);">→ Standard T4 monotherapy should work, but your history suggests otherwise</p>
+                </div>
+                <div class="insight-card">
+                    <h4>Clinical Context</h4>
+                    <p><strong>Aug 2025:</strong> TSH spike to 368 (radioactive iodine therapy)</p>
+                    <p><strong>Current:</strong> TSH normalized at 1.72 (Nov 2025)</p>
+                    <p style="margin-top: 10px; color: var(--yellow);">→ Post-RAI requires ongoing thyroid hormone replacement</p>
+                </div>
+                <div class="insight-card">
+                    <h4>Wearable Response</h4>
+                    <p>NightSignal shows protocol-dependent HR patterns</p>
+                    <p>View <a href="nightsignal.html" style="color: var(--cyan);">protocol analysis</a> for dose-response data</p>
+                    <p style="margin-top: 10px; color: var(--blue);">→ Wearables can detect thyroid status changes before labs</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deiodinase Genetics Section -->
+        <h2>Deiodinase Enzyme Genetics</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">These enzymes convert T4 (inactive) to T3 (active). Variants can affect conversion efficiency and response to thyroid medications.</p>
+
+        <div class="gene-grid">
+            <div class="gene-card">
+                <div class="gene-name">DIO2 (Type 2 Deiodinase)</div>
+                <div class="gene-function">Primary T4→T3 conversion in brain, pituitary, brown fat</div>
+                <div class="genotype-display">
+                    <div class="alleles green">CC</div>
+                    <div class="interpretation">
+                        <span class="status-badge status-normal">Normal Activity</span>
+                        <div style="margin-top: 5px;">Thr92Thr - Wild type enzyme function</div>
+                    </div>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary);">
+                    <strong>rs225014:</strong> The A allele (Ala92) is associated with reduced conversion and possible benefit from T3 supplementation. You have the normal C allele.
+                </p>
+            </div>
+
+            <div class="gene-card">
+                <div class="gene-name">DIO1 (Type 1 Deiodinase)</div>
+                <div class="gene-function">Peripheral T4→T3 conversion in liver, kidney, thyroid</div>
+                <div class="genotype-display">
+                    <div class="alleles green">CC</div>
+                    <div class="interpretation">
+                        <span class="status-badge status-normal">Normal Activity</span>
+                        <div style="margin-top: 5px;">Standard peripheral conversion</div>
+                    </div>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary);">
+                    <strong>rs2235544:</strong> Normal DIO1 expression and activity expected.
+                </p>
+            </div>
+
+            <div class="gene-card">
+                <div class="gene-name">DIO1 (Second Variant)</div>
+                <div class="gene-function">Additional DIO1 regulatory region</div>
+                <div class="genotype-display">
+                    <div class="alleles green">CC</div>
+                    <div class="interpretation">
+                        <span class="status-badge status-normal">Normal</span>
+                        <div style="margin-top: 5px;">rs11206244 - Wild type</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gene-card">
+                <div class="gene-name">DIO2 (Promoter Region)</div>
+                <div class="gene-function">DIO2 expression regulation</div>
+                <div class="genotype-display">
+                    <div class="alleles green">CC</div>
+                    <div class="interpretation">
+                        <span class="status-badge status-normal">Normal Expression</span>
+                        <div style="margin-top: 5px;">rs12885300 - Standard promoter activity</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="finding-box">
+            <h3>Genetic Summary: Normal Deiodinase Function</h3>
+            <p>All tested deiodinase variants show <strong>wild-type (normal)</strong> genotypes. This means:</p>
+            <ul style="margin: 15px 0 0 20px;">
+                <li>Standard T4→T3 conversion capacity expected</li>
+                <li>T4 monotherapy (levothyroxine) should be effective</li>
+                <li>No genetic indication for mandatory T3 supplementation</li>
+            </ul>
+            <p style="margin-top: 15px; color: var(--yellow);"><strong>However:</strong> Post-RAI thyroid ablation means you are 100% dependent on exogenous thyroid hormone. Genetics tell us <em>how</em> you'll respond, not <em>if</em> you need replacement.</p>
+        </div>
+
+        <!-- Thyroid Lab Trends -->
+        <h2>Thyroid Lab Trends</h2>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="label">Latest TSH</div>
+                <div class="value green">1.72</div>
+                <div class="unit">mIU/L (Nov 2025)</div>
+            </div>
+            <div class="stat-box">
+                <div class="label">Latest Free T4</div>
+                <div class="value green">1.42</div>
+                <div class="unit">ng/dL</div>
+            </div>
+            <div class="stat-box">
+                <div class="label">Latest Total T3</div>
+                <div class="value green">124</div>
+                <div class="unit">ng/dL</div>
+            </div>
+            <div class="stat-box">
+                <div class="label">T3/T4 Ratio</div>
+                <div class="value blue">87</div>
+                <div class="unit">ng/dL per ng/dL</div>
+            </div>
+            <div class="stat-box">
+                <div class="label">Thyroglobulin</div>
+                <div class="value green">0.1</div>
+                <div class="unit">ng/mL (tumor marker)</div>
+            </div>
+        </div>
+
+        <!-- TSH Chart -->
+        <div class="chart-container">
+            <h3>TSH Trend Over Time</h3>
+            <div class="chart-wrapper">
+                <canvas id="tshChart"></canvas>
+            </div>
+        </div>
+
+        <!-- T3/T4 Chart -->
+        <div class="chart-container">
+            <h3>T3 and Free T4 Trends</h3>
+            <div class="chart-wrapper">
+                <canvas id="t3t4Chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Clinical Timeline -->
+        <h2>Clinical Timeline</h2>
+
+        <div class="timeline-event">
+            <span class="date">Aug 26, 2025</span> - TSH 368 mIU/L
+            <p style="color: var(--text-secondary);">Extreme TSH elevation following radioactive iodine (RAI) therapy for thyroid ablation</p>
+        </div>
+
+        <div class="timeline-event treatment">
+            <span class="date">Aug 29, 2025</span> - TSH 9.95 mIU/L
+            <p style="color: var(--text-secondary);">Beginning recovery, thyroid hormone replacement initiated/adjusted</p>
+        </div>
+
+        <div class="timeline-event treatment">
+            <span class="date">Oct - Nov 2025</span> - TSH normalizing (0.39 → 2.55 → 1.72)
+            <p style="color: var(--text-secondary);">Gradual stabilization with ongoing T3/T4 protocol optimization</p>
+        </div>
+
+        <!-- Integration with Wearables -->
+        <h2>Wearable Integration Insights</h2>
+
+        <div class="info-box">
+            <h3>How Wearables Detect Thyroid Status</h3>
+            <p>The NightSignal algorithm adapted from Snyder Lab's COVID detection can identify thyroid state changes:</p>
+            <ul style="margin: 15px 0 0 20px;">
+                <li><strong>Hypothyroid signal:</strong> Decreased overnight RHR, increased HRV, prolonged recovery times</li>
+                <li><strong>Hyperthyroid signal:</strong> Elevated overnight RHR, decreased HRV, faster acute response</li>
+                <li><strong>Optimal state:</strong> Stable baseline with consistent deviation patterns</li>
+            </ul>
+            <p style="margin-top: 15px;"><a href="nightsignal.html" style="color: var(--cyan);">View your NightSignal analysis →</a></p>
+        </div>
+
+        <!-- Recommendations -->
+        <h2>Personalized Recommendations</h2>
+
+        <div class="recommendation-box">
+            <h3>Based on Genetics + Labs + Wearables</h3>
+            <ul class="recommendation-list">
+                <li>
+                    <span class="icon">🧬</span>
+                    <div>
+                        <strong>T4 Monotherapy is Genetically Supported</strong>
+                        <p style="color: var(--text-secondary);">Your normal DIO2 genotype means you should convert T4→T3 efficiently. However, given RAI ablation, ensure adequate T4 dosing.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="icon">⚖️</span>
+                    <div>
+                        <strong>Monitor T3/T4 Ratio</strong>
+                        <p style="color: var(--text-secondary);">Current ratio ~87 is reasonable. If T3 drops while T4 is adequate, consider evaluation despite normal genetics.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="icon">⌚</span>
+                    <div>
+                        <strong>Use Wearables as Early Warning</strong>
+                        <p style="color: var(--text-secondary);">NightSignal can detect thyroid shifts days before labs change. Track overnight RHR trends between lab draws.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="icon">🎯</span>
+                    <div>
+                        <strong>Target TSH 0.5-2.0 Post-Thyroidectomy</strong>
+                        <p style="color: var(--text-secondary);">Current TSH 1.72 is within optimal range. Maintain current protocol if feeling well and wearables stable.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="icon">📊</span>
+                    <div>
+                        <strong>Track Thyroglobulin for Recurrence</strong>
+                        <p style="color: var(--text-secondary);">Tg 0.1 ng/mL is excellent post-RAI. Continue monitoring every 6-12 months as tumor marker.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Summary Table -->
+        <h2>Variant Summary Table</h2>
+        <div class="chart-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Gene</th>
+                        <th>rsID</th>
+                        <th>Genotype</th>
+                        <th>Phenotype</th>
+                        <th>Clinical Implication</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>DIO2</td>
+                        <td>rs225014</td>
+                        <td>CC</td>
+                        <td class="green">Normal (Thr92Thr)</td>
+                        <td>Standard T4→T3 conversion</td>
+                    </tr>
+                    <tr>
+                        <td>DIO2</td>
+                        <td>rs12885300</td>
+                        <td>CC</td>
+                        <td class="green">Normal</td>
+                        <td>Normal DIO2 expression</td>
+                    </tr>
+                    <tr>
+                        <td>DIO1</td>
+                        <td>rs2235544</td>
+                        <td>CC</td>
+                        <td class="green">Normal</td>
+                        <td>Normal peripheral conversion</td>
+                    </tr>
+                    <tr>
+                        <td>DIO1</td>
+                        <td>rs11206244</td>
+                        <td>CC</td>
+                        <td class="green">Normal</td>
+                        <td>Standard DIO1 activity</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="background: var(--bg-tertiary); border-radius: 8px; padding: 20px; margin-top: 40px; font-size: 13px; color: var(--text-secondary);">
+            <strong>Disclaimer:</strong> This pharmacogenomic analysis is for informational purposes. Thyroid hormone dosing should be determined by healthcare providers based on clinical evaluation, not genetics alone. The wearable integration is experimental and should complement, not replace, standard lab monitoring.
+        </div>
+    </div>
+
+    <script>
+        // Thyroid lab data
+        const thyroidData = [
+            {"date": "2023-09-06", "test": "TSH", "value": 1.34},
+            {"date": "2025-01-06", "test": "TSH", "value": 0.2},
+            {"date": "2025-01-06", "test": "T3 Total", "value": 107},
+            {"date": "2025-01-06", "test": "Free T4", "value": 1.63},
+            {"date": "2025-01-27", "test": "TSH", "value": 0.92},
+            {"date": "2025-01-27", "test": "T3 Total", "value": 94},
+            {"date": "2025-01-27", "test": "Free T4", "value": 1.55},
+            {"date": "2025-02-10", "test": "TSH", "value": 0.25},
+            {"date": "2025-02-10", "test": "Free T4", "value": 1.56},
+            {"date": "2025-02-18", "test": "TSH", "value": 0.33},
+            {"date": "2025-02-18", "test": "Free T4", "value": 1.59},
+            {"date": "2025-03-22", "test": "TSH", "value": 0.64},
+            {"date": "2025-03-22", "test": "T3 Total", "value": 96},
+            {"date": "2025-03-22", "test": "Free T4", "value": 1.55},
+            {"date": "2025-04-22", "test": "TSH", "value": 0.78},
+            {"date": "2025-04-22", "test": "T3 Total", "value": 103},
+            {"date": "2025-04-22", "test": "Free T4", "value": 1.58},
+            {"date": "2025-04-25", "test": "TSH", "value": 0.33},
+            {"date": "2025-06-02", "test": "TSH", "value": 3.88},
+            {"date": "2025-06-02", "test": "T3 Total", "value": 91},
+            {"date": "2025-06-02", "test": "Free T4", "value": 1.21},
+            {"date": "2025-06-13", "test": "TSH", "value": 2.76},
+            {"date": "2025-06-13", "test": "T3 Total", "value": 102},
+            {"date": "2025-06-13", "test": "Free T4", "value": 1.27},
+            {"date": "2025-07-09", "test": "TSH", "value": 1.16},
+            {"date": "2025-07-09", "test": "T3 Total", "value": 109},
+            {"date": "2025-07-09", "test": "Free T4", "value": 1.38},
+            {"date": "2025-07-13", "test": "TSH", "value": 1.04},
+            {"date": "2025-07-31", "test": "TSH", "value": 4.46},
+            {"date": "2025-07-31", "test": "T3 Total", "value": 160},
+            {"date": "2025-07-31", "test": "Free T4", "value": 1.54},
+            {"date": "2025-08-14", "test": "TSH", "value": 0.16},
+            {"date": "2025-08-14", "test": "T3 Total", "value": 193},
+            {"date": "2025-08-14", "test": "Free T4", "value": 1.72},
+            {"date": "2025-08-26", "test": "TSH", "value": 368},
+            {"date": "2025-08-29", "test": "TSH", "value": 9.95},
+            {"date": "2025-10-03", "test": "TSH", "value": 0.39},
+            {"date": "2025-10-03", "test": "T3 Total", "value": 153},
+            {"date": "2025-10-03", "test": "Free T4", "value": 1.34},
+            {"date": "2025-10-28", "test": "TSH", "value": 2.55},
+            {"date": "2025-10-28", "test": "T3 Total", "value": 99},
+            {"date": "2025-10-28", "test": "Free T4", "value": 1.13},
+            {"date": "2025-11-21", "test": "TSH", "value": 1.72},
+            {"date": "2025-11-21", "test": "T3 Total", "value": 124},
+            {"date": "2025-11-21", "test": "Free T4", "value": 1.42}
+        ];
+
+        // Filter data by test type
+        const tshData = thyroidData.filter(d => d.test === "TSH").map(d => ({x: d.date, y: d.value}));
+        const t3Data = thyroidData.filter(d => d.test === "T3 Total").map(d => ({x: d.date, y: d.value}));
+        const t4Data = thyroidData.filter(d => d.test === "Free T4").map(d => ({x: d.date, y: d.value}));
+
+        // TSH Chart (with log scale due to 368 spike)
+        const tshCtx = document.getElementById('tshChart').getContext('2d');
+        new Chart(tshCtx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'TSH (mIU/L)',
+                    data: tshData,
+                    borderColor: '#f85149',
+                    backgroundColor: 'rgba(248, 81, 73, 0.1)',
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'month'
+                        },
+                        grid: { color: '#30363d' },
+                        ticks: { color: '#8b949e' }
+                    },
+                    y: {
+                        type: 'logarithmic',
+                        grid: { color: '#30363d' },
+                        ticks: { color: '#8b949e' },
+                        title: {
+                            display: true,
+                            text: 'TSH (mIU/L) - Log Scale',
+                            color: '#8b949e'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#f0f6fc' }
+                    },
+                    annotation: {
+                        annotations: {
+                            normalRange: {
+                                type: 'box',
+                                yMin: 0.4,
+                                yMax: 4.0,
+                                backgroundColor: 'rgba(63, 185, 80, 0.1)',
+                                borderColor: 'transparent'
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // T3/T4 Chart
+        const t3t4Ctx = document.getElementById('t3t4Chart').getContext('2d');
+        new Chart(t3t4Ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Total T3 (ng/dL)',
+                        data: t3Data,
+                        borderColor: '#58a6ff',
+                        backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                        fill: false,
+                        tension: 0.1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Free T4 (ng/dL)',
+                        data: t4Data,
+                        borderColor: '#a371f7',
+                        backgroundColor: 'rgba(163, 113, 247, 0.1)',
+                        fill: false,
+                        tension: 0.1,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'month'
+                        },
+                        grid: { color: '#30363d' },
+                        ticks: { color: '#8b949e' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: { color: '#30363d' },
+                        ticks: { color: '#58a6ff' },
+                        title: {
+                            display: true,
+                            text: 'Total T3 (ng/dL)',
+                            color: '#58a6ff'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#a371f7' },
+                        title: {
+                            display: true,
+                            text: 'Free T4 (ng/dL)',
+                            color: '#a371f7'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#f0f6fc' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
