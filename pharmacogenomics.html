@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacogenomics - Drug Response Profile</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --green: #3fb950;
+            --yellow: #d29922;
+            --red: #f85149;
+            --blue: #58a6ff;
+            --purple: #a371f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        nav {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        nav a:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        nav a.active {
+            background: var(--purple);
+            color: var(--bg-primary);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin: 30px 0 15px 0;
+            color: var(--blue);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .summary-card h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .summary-card .status {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .detail {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .gene-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .gene-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .gene-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .gene-category {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .phenotype-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .phenotype-normal {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--green);
+        }
+
+        .phenotype-intermediate {
+            background: rgba(210, 153, 34, 0.2);
+            color: var(--yellow);
+        }
+
+        .phenotype-altered {
+            background: rgba(248, 81, 73, 0.2);
+            color: var(--red);
+        }
+
+        .phenotype-rapid {
+            background: rgba(88, 166, 255, 0.2);
+            color: var(--blue);
+        }
+
+        .snp-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        .snp-info .item {
+            font-size: 13px;
+        }
+
+        .snp-info .label {
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .clinical-implications {
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .clinical-implications h4 {
+            font-size: 13px;
+            color: var(--purple);
+            margin-bottom: 10px;
+        }
+
+        .drug-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .drug-tag {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .drug-tag.caution {
+            border-color: var(--yellow);
+            color: var(--yellow);
+        }
+
+        .drug-tag.normal {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .finding-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--green);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .finding-box h3 {
+            color: var(--green);
+            margin-bottom: 10px;
+        }
+
+        .warning-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--yellow);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .warning-box h3 {
+            color: var(--yellow);
+            margin-bottom: 10px;
+        }
+
+        .info-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--blue);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-box h3 {
+            color: var(--blue);
+            margin-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .green { color: var(--green); }
+        .yellow { color: var(--yellow); }
+        .red { color: var(--red); }
+        .blue { color: var(--blue); }
+        .purple { color: var(--purple); }
+
+        .disclaimer {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 40px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">Analysis</a>
+            <a href="data-explorer.html">Data Explorer</a>
+            <a href="nightsignal.html">NightSignal</a>
+            <a href="acute-response.html">Acute Response</a>
+            <a href="pharmacogenomics.html" class="active">Pharmacogenomics</a>
+        </nav>
+
+        <h1>Pharmacogenomics Profile</h1>
+        <p class="subtitle">Drug metabolism and response genetic variants - Ariel B. Ganz</p>
+
+        <!-- Executive Summary -->
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h3>CYP2D6 Status</h3>
+                <div class="status green">Normal Metabolizer</div>
+                <div class="detail">Standard dosing for codeine, tramadol, tamoxifen</div>
+            </div>
+            <div class="summary-card">
+                <h3>CYP2C19 Status</h3>
+                <div class="status green">Normal Metabolizer</div>
+                <div class="detail">Standard dosing for clopidogrel, PPIs, SSRIs</div>
+            </div>
+            <div class="summary-card">
+                <h3>CYP2C9 Status</h3>
+                <div class="status green">Normal Metabolizer</div>
+                <div class="detail">Standard dosing for warfarin, NSAIDs</div>
+            </div>
+            <div class="summary-card">
+                <h3>CYP1A2 Status</h3>
+                <div class="status blue">Rapid Metabolizer</div>
+                <div class="detail">May need higher caffeine, clozapine doses</div>
+            </div>
+            <div class="summary-card">
+                <h3>COMT Status</h3>
+                <div class="status yellow">Intermediate Activity</div>
+                <div class="detail">Val/Met - balanced dopamine/catecholamine metabolism</div>
+            </div>
+            <div class="summary-card">
+                <h3>ABCB1 (P-gp) Status</h3>
+                <div class="status yellow">Intermediate Transport</div>
+                <div class="detail">May affect bioavailability of some drugs</div>
+            </div>
+        </div>
+
+        <!-- Key Findings -->
+        <div class="finding-box">
+            <h3>Key Finding: Normal CYP Metabolism</h3>
+            <p>All major cytochrome P450 drug-metabolizing enzymes (CYP2D6, CYP2C19, CYP2C9) show <strong>normal metabolizer</strong> phenotypes. This means standard drug dosing recommendations apply for most medications.</p>
+        </div>
+
+        <div class="info-box">
+            <h3>Notable: Rapid CYP1A2 Metabolism</h3>
+            <p>The <strong>rs762551 AA</strong> genotype indicates rapid CYP1A2 induction. This affects:</p>
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li><strong>Caffeine</strong> - metabolized quickly, may tolerate higher intake</li>
+                <li><strong>Clozapine</strong> - may require higher doses</li>
+                <li><strong>Theophylline</strong> - faster clearance</li>
+                <li><strong>Melatonin</strong> - may need higher doses for effect</li>
+            </ul>
+        </div>
+
+        <div class="warning-box">
+            <h3>Note: Intermediate COMT Activity</h3>
+            <p>The <strong>rs4680 AG (Val/Met)</strong> genotype shows intermediate COMT enzyme activity. This affects:</p>
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li><strong>Dopamine metabolism</strong> - intermediate prefrontal cortex dopamine levels</li>
+                <li><strong>Estrogen metabolism</strong> - moderate catechol estrogen clearance</li>
+                <li><strong>Stress response</strong> - balanced "warrior" vs "worrier" traits</li>
+            </ul>
+        </div>
+
+        <!-- Drug Metabolism Enzymes -->
+        <h2>Drug Metabolism Enzymes (Phase I)</h2>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">CYP2D6</div>
+                    <div class="gene-category">Major drug metabolizing enzyme - 25% of all drugs</div>
+                </div>
+                <span class="phenotype-badge phenotype-normal">Normal Metabolizer</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs28371725 (*41)</div>
+                <div class="item"><div class="label">Genotype</div>CC</div>
+                <div class="item"><div class="label">Function</div>Normal</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Standard metabolism of CYP2D6 substrates. Normal dosing recommended for:</p>
+                <div class="drug-list">
+                    <span class="drug-tag normal">Codeine</span>
+                    <span class="drug-tag normal">Tramadol</span>
+                    <span class="drug-tag normal">Tamoxifen</span>
+                    <span class="drug-tag normal">Ondansetron</span>
+                    <span class="drug-tag normal">Metoprolol</span>
+                    <span class="drug-tag normal">Atomoxetine</span>
+                    <span class="drug-tag normal">SSRIs (paroxetine, fluoxetine)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">CYP2C19</div>
+                    <div class="gene-category">Proton pump inhibitors, clopidogrel, SSRIs</div>
+                </div>
+                <span class="phenotype-badge phenotype-normal">Normal Metabolizer</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs4244285 (*2)</div>
+                <div class="item"><div class="label">Genotype</div>GG</div>
+                <div class="item"><div class="label">Function</div>Normal</div>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs12248560 (*17)</div>
+                <div class="item"><div class="label">Genotype</div>CC</div>
+                <div class="item"><div class="label">Function</div>Normal (not ultrarapid)</div>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs4986893 (*3)</div>
+                <div class="item"><div class="label">Genotype</div>GG</div>
+                <div class="item"><div class="label">Function</div>Normal</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Normal CYP2C19 function. Standard dosing for:</p>
+                <div class="drug-list">
+                    <span class="drug-tag normal">Clopidogrel (Plavix)</span>
+                    <span class="drug-tag normal">Omeprazole</span>
+                    <span class="drug-tag normal">Pantoprazole</span>
+                    <span class="drug-tag normal">Citalopram</span>
+                    <span class="drug-tag normal">Escitalopram</span>
+                    <span class="drug-tag normal">Sertraline</span>
+                    <span class="drug-tag normal">Voriconazole</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">CYP2C9</div>
+                    <div class="gene-category">Warfarin, NSAIDs, sulfonylureas</div>
+                </div>
+                <span class="phenotype-badge phenotype-normal">Normal Metabolizer (*1/*1)</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs1799853 (*2)</div>
+                <div class="item"><div class="label">Genotype</div>CC</div>
+                <div class="item"><div class="label">Function</div>Normal</div>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs1057910 (*3)</div>
+                <div class="item"><div class="label">Genotype</div>AA</div>
+                <div class="item"><div class="label">Function</div>Normal</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Normal CYP2C9 activity. Standard dosing for:</p>
+                <div class="drug-list">
+                    <span class="drug-tag normal">Warfarin</span>
+                    <span class="drug-tag normal">Phenytoin</span>
+                    <span class="drug-tag normal">Celecoxib</span>
+                    <span class="drug-tag normal">Ibuprofen</span>
+                    <span class="drug-tag normal">Losartan</span>
+                    <span class="drug-tag normal">Glipizide</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">CYP1A2</div>
+                    <div class="gene-category">Caffeine, clozapine, theophylline, melatonin</div>
+                </div>
+                <span class="phenotype-badge phenotype-rapid">Rapid Metabolizer</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs762551 (*1F)</div>
+                <div class="item"><div class="label">Genotype</div>AA</div>
+                <div class="item"><div class="label">Function</div>High inducibility</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p><strong>Rapid CYP1A2 induction</strong> - enhanced enzyme activity when exposed to inducers (smoking, charred foods):</p>
+                <div class="drug-list">
+                    <span class="drug-tag caution">Caffeine - cleared faster</span>
+                    <span class="drug-tag caution">Melatonin - may need higher dose</span>
+                    <span class="drug-tag caution">Clozapine - monitor levels</span>
+                    <span class="drug-tag caution">Theophylline - faster clearance</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">CYP3A5</div>
+                    <div class="gene-category">Tacrolimus, cyclosporine, statins</div>
+                </div>
+                <span class="phenotype-badge phenotype-normal">Non-expressor (*3/*3)</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs776746 (*3)</div>
+                <div class="item"><div class="label">Genotype</div>CC</div>
+                <div class="item"><div class="label">Function</div>Non-expressor (common)</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>CYP3A5 non-expressor (most common phenotype). Standard dosing for tacrolimus and other CYP3A substrates.</p>
+            </div>
+        </div>
+
+        <!-- Drug Transporters -->
+        <h2>Drug Transporters</h2>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">ABCB1 (MDR1/P-glycoprotein)</div>
+                    <div class="gene-category">Drug efflux transporter - affects bioavailability</div>
+                </div>
+                <span class="phenotype-badge phenotype-intermediate">Intermediate Function</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs1045642 (C3435T)</div>
+                <div class="item"><div class="label">Genotype</div>AG</div>
+                <div class="item"><div class="label">Function</div>Intermediate</div>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs2032582 (G2677T/A)</div>
+                <div class="item"><div class="label">Genotype</div>AC</div>
+                <div class="item"><div class="label">Function</div>Intermediate</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Intermediate P-glycoprotein expression may affect absorption/distribution of:</p>
+                <div class="drug-list">
+                    <span class="drug-tag caution">Digoxin</span>
+                    <span class="drug-tag caution">Cyclosporine</span>
+                    <span class="drug-tag caution">Some statins</span>
+                    <span class="drug-tag caution">HIV protease inhibitors</span>
+                    <span class="drug-tag caution">Some cancer drugs</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase II Metabolism -->
+        <h2>Phase II Detoxification</h2>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">GSTP1</div>
+                    <div class="gene-category">Glutathione S-transferase - detoxification</div>
+                </div>
+                <span class="phenotype-badge phenotype-normal">Normal Activity</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs1695 (*B)</div>
+                <div class="item"><div class="label">Genotype</div>AA (Ile/Ile)</div>
+                <div class="item"><div class="label">Function</div>Normal</div>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs1138272</div>
+                <div class="item"><div class="label">Genotype</div>CC</div>
+                <div class="item"><div class="label">Function</div>Normal</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Normal glutathione conjugation capacity for drug and toxin elimination.</p>
+            </div>
+        </div>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">COMT</div>
+                    <div class="gene-category">Catechol-O-methyltransferase - dopamine/estrogen metabolism</div>
+                </div>
+                <span class="phenotype-badge phenotype-intermediate">Intermediate Activity (Val/Met)</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs4680 (Val158Met)</div>
+                <div class="item"><div class="label">Genotype</div>AG</div>
+                <div class="item"><div class="label">Function</div>Intermediate enzyme activity</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p><strong>Val/Met heterozygote</strong> - balanced COMT activity affecting:</p>
+                <ul style="margin: 10px 0 10px 20px;">
+                    <li><strong>Dopamine:</strong> Moderate prefrontal dopamine - balance of cognitive flexibility and stability</li>
+                    <li><strong>Estrogen:</strong> Intermediate catechol estrogen clearance</li>
+                    <li><strong>Pain:</strong> Moderate pain sensitivity (neither heightened nor reduced)</li>
+                    <li><strong>Stress:</strong> Balanced stress response phenotype</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Neurotransmitter Variants -->
+        <h2>Neurotransmitter & Receptor Variants</h2>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">DRD2/ANKK1 (Taq1A)</div>
+                    <div class="gene-category">Dopamine D2 receptor density</div>
+                </div>
+                <span class="phenotype-badge phenotype-intermediate">Intermediate D2 Density</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs1800497</div>
+                <div class="item"><div class="label">Genotype</div>AG (A1/A2)</div>
+                <div class="item"><div class="label">Function</div>~25% reduced D2 receptors</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Moderately reduced D2 receptor density associated with:</p>
+                <ul style="margin: 10px 0 10px 20px;">
+                    <li>Intermediate reward sensitivity</li>
+                    <li>May influence response to dopaminergic medications</li>
+                    <li>Consider when prescribing antipsychotics (D2 blockers)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">OPRM1</div>
+                    <div class="gene-category">Mu-opioid receptor</div>
+                </div>
+                <span class="phenotype-badge phenotype-normal">Normal Opioid Response</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs1799971 (A118G)</div>
+                <div class="item"><div class="label">Genotype</div>GG (Asp/Asp)</div>
+                <div class="item"><div class="label">Function</div>Normal receptor function</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Normal opioid receptor function - standard response to opioid analgesics expected.</p>
+            </div>
+        </div>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">BDNF</div>
+                    <div class="gene-category">Brain-derived neurotrophic factor</div>
+                </div>
+                <span class="phenotype-badge phenotype-normal">Normal BDNF Secretion</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs6265 (Val66Met)</div>
+                <div class="item"><div class="label">Genotype</div>CC (Val/Val)</div>
+                <div class="item"><div class="label">Function</div>Normal activity-dependent secretion</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Normal BDNF secretion - expected response to antidepressants and cognitive interventions.</p>
+            </div>
+        </div>
+
+        <!-- Other Relevant Variants -->
+        <h2>Other Clinically Relevant Variants</h2>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">MCM6/LCT (Lactase Persistence)</div>
+                    <div class="gene-category">Lactose tolerance</div>
+                </div>
+                <span class="phenotype-badge phenotype-normal">Likely Lactose Tolerant</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs4988235</div>
+                <div class="item"><div class="label">Genotype</div>AG</div>
+                <div class="item"><div class="label">Function</div>Lactase persistence (heterozygous)</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Carries one copy of the lactase persistence allele - likely able to digest lactose into adulthood.</p>
+            </div>
+        </div>
+
+        <div class="gene-section">
+            <div class="gene-header">
+                <div>
+                    <div class="gene-name">TCF7L2</div>
+                    <div class="gene-category">Type 2 diabetes risk</div>
+                </div>
+                <span class="phenotype-badge phenotype-intermediate">Intermediate Risk</span>
+            </div>
+            <div class="snp-info">
+                <div class="item"><div class="label">Variant</div>rs7903146</div>
+                <div class="item"><div class="label">Genotype</div>CT</div>
+                <div class="item"><div class="label">Risk</div>~1.4x increased T2D risk</div>
+            </div>
+            <div class="clinical-implications">
+                <h4>Clinical Implications</h4>
+                <p>Heterozygous for the T2D risk allele - moderately increased diabetes risk. Consider lifestyle interventions and monitoring.</p>
+            </div>
+        </div>
+
+        <!-- Summary Table -->
+        <h2>Complete Variant Summary</h2>
+
+        <div class="gene-section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Gene</th>
+                        <th>rsID</th>
+                        <th>Genotype</th>
+                        <th>Phenotype</th>
+                        <th>Clinical Relevance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>CYP2D6</td>
+                        <td>rs28371725</td>
+                        <td>CC</td>
+                        <td class="green">Normal</td>
+                        <td>Standard dosing</td>
+                    </tr>
+                    <tr>
+                        <td>CYP2C19</td>
+                        <td>rs4244285, rs12248560, rs4986893</td>
+                        <td>GG, CC, GG</td>
+                        <td class="green">Normal</td>
+                        <td>Standard dosing</td>
+                    </tr>
+                    <tr>
+                        <td>CYP2C9</td>
+                        <td>rs1799853, rs1057910</td>
+                        <td>CC, AA</td>
+                        <td class="green">Normal</td>
+                        <td>Standard warfarin dosing</td>
+                    </tr>
+                    <tr>
+                        <td>CYP1A2</td>
+                        <td>rs762551</td>
+                        <td>AA</td>
+                        <td class="blue">Rapid</td>
+                        <td>May need higher doses of CYP1A2 substrates</td>
+                    </tr>
+                    <tr>
+                        <td>CYP3A5</td>
+                        <td>rs776746</td>
+                        <td>CC</td>
+                        <td class="green">Non-expressor</td>
+                        <td>Standard tacrolimus dosing</td>
+                    </tr>
+                    <tr>
+                        <td>ABCB1</td>
+                        <td>rs1045642, rs2032582</td>
+                        <td>AG, AC</td>
+                        <td class="yellow">Intermediate</td>
+                        <td>Monitor P-gp substrate levels</td>
+                    </tr>
+                    <tr>
+                        <td>COMT</td>
+                        <td>rs4680</td>
+                        <td>AG</td>
+                        <td class="yellow">Intermediate</td>
+                        <td>Balanced dopamine metabolism</td>
+                    </tr>
+                    <tr>
+                        <td>GSTP1</td>
+                        <td>rs1695, rs1138272</td>
+                        <td>AA, CC</td>
+                        <td class="green">Normal</td>
+                        <td>Normal detoxification</td>
+                    </tr>
+                    <tr>
+                        <td>OPRM1</td>
+                        <td>rs1799971</td>
+                        <td>GG</td>
+                        <td class="green">Normal</td>
+                        <td>Standard opioid response</td>
+                    </tr>
+                    <tr>
+                        <td>BDNF</td>
+                        <td>rs6265</td>
+                        <td>CC</td>
+                        <td class="green">Normal</td>
+                        <td>Normal neuroplasticity</td>
+                    </tr>
+                    <tr>
+                        <td>DRD2</td>
+                        <td>rs1800497</td>
+                        <td>AG</td>
+                        <td class="yellow">Intermediate</td>
+                        <td>Reduced D2 receptors</td>
+                    </tr>
+                    <tr>
+                        <td>LCT</td>
+                        <td>rs4988235</td>
+                        <td>AG</td>
+                        <td class="green">Tolerant</td>
+                        <td>Lactose persistence</td>
+                    </tr>
+                    <tr>
+                        <td>TCF7L2</td>
+                        <td>rs7903146</td>
+                        <td>CT</td>
+                        <td class="yellow">Intermediate</td>
+                        <td>1.4x T2D risk</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="disclaimer">
+            <strong>Disclaimer:</strong> This pharmacogenomic report is for informational purposes only and should not replace professional medical advice. Drug dosing decisions should be made by healthcare providers considering the complete clinical picture, not genetics alone. Some drug-gene interactions may not be captured by this limited panel. For comprehensive pharmacogenomic testing, consider clinical-grade panels (e.g., CPIC guidelines).
+        </div>
+
+    </div>
+</body>
+</html>
