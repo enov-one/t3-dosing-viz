@@ -358,14 +358,14 @@
         <!-- Hero Section: Key Insight -->
         <div class="hero-section">
             <h2>Personalized Thyroid Insight</h2>
-            <p style="font-size: 18px; margin-bottom: 20px;">Your genetics indicate <strong class="green">normal T4→T3 conversion capacity</strong>, but your clinical history shows significant thyroid events requiring careful monitoring.</p>
+            <p style="font-size: 18px; margin-bottom: 20px;">Your genetics indicate <strong class="yellow">IMPAIRED T4→T3 conversion capacity</strong> due to the DIO2 Thr92Ala variant. This may explain suboptimal response to T4-only therapy.</p>
 
             <div class="insight-grid">
                 <div class="insight-card">
                     <h4>Genetic Profile</h4>
-                    <p><strong>DIO2 rs225014:</strong> CC (Thr/Thr) - Normal deiodinase activity</p>
+                    <p><strong>DIO2 rs225014:</strong> CC (Ala/Ala) - <span style="color: var(--yellow);">REDUCED deiodinase activity</span></p>
                     <p><strong>DIO1 rs2235544:</strong> CC - Normal peripheral conversion</p>
-                    <p style="margin-top: 10px; color: var(--green);">→ Standard T4 monotherapy should work, but your history suggests otherwise</p>
+                    <p style="margin-top: 10px; color: var(--yellow);">→ May benefit from T3 supplementation (combination T4+T3 therapy)</p>
                 </div>
                 <div class="insight-card">
                     <h4>Clinical Context</h4>
@@ -391,14 +391,14 @@
                 <div class="gene-name">DIO2 (Type 2 Deiodinase)</div>
                 <div class="gene-function">Primary T4→T3 conversion in brain, pituitary, brown fat</div>
                 <div class="genotype-display">
-                    <div class="alleles green">CC</div>
+                    <div class="alleles yellow">CC</div>
                     <div class="interpretation">
-                        <span class="status-badge status-normal">Normal Activity</span>
-                        <div style="margin-top: 5px;">Thr92Thr - Wild type enzyme function</div>
+                        <span class="status-badge status-variant">Reduced Activity</span>
+                        <div style="margin-top: 5px;">Ala92Ala - Impaired enzyme function</div>
                     </div>
                 </div>
                 <p style="font-size: 13px; color: var(--text-secondary);">
-                    <strong>rs225014:</strong> The A allele (Ala92) is associated with reduced conversion and possible benefit from T3 supplementation. You have the normal C allele.
+                    <strong>rs225014 (Thr92Ala):</strong> CC = homozygous for the Ala92 variant. This reduces DIO2 enzyme activity and T4→T3 conversion. ~16% of population carries this variant. May benefit from combination T4+T3 therapy.
                 </p>
             </div>
 
@@ -442,15 +442,15 @@
             </div>
         </div>
 
-        <div class="finding-box">
-            <h3>Genetic Summary: Normal Deiodinase Function</h3>
-            <p>All tested deiodinase variants show <strong>wild-type (normal)</strong> genotypes. This means:</p>
+        <div class="warning-box">
+            <h3>Genetic Summary: Impaired DIO2 Function (Thr92Ala Variant)</h3>
+            <p>You carry the <strong>homozygous DIO2 Thr92Ala variant (CC)</strong>, which is associated with:</p>
             <ul style="margin: 15px 0 0 20px;">
-                <li>Standard T4→T3 conversion capacity expected</li>
-                <li>T4 monotherapy (levothyroxine) should be effective</li>
-                <li>No genetic indication for mandatory T3 supplementation</li>
+                <li><strong style="color: var(--yellow);">Reduced T4→T3 conversion</strong> - especially in brain and pituitary</li>
+                <li><strong style="color: var(--yellow);">Suboptimal response to T4-only therapy</strong> - may have symptoms despite "normal" labs</li>
+                <li><strong style="color: var(--green);">May benefit from combination T4+T3 therapy</strong> - studies show improved well-being</li>
             </ul>
-            <p style="margin-top: 15px; color: var(--yellow);"><strong>However:</strong> Post-RAI thyroid ablation means you are 100% dependent on exogenous thyroid hormone. Genetics tell us <em>how</em> you'll respond, not <em>if</em> you need replacement.</p>
+            <p style="margin-top: 15px;"><strong>Clinical Relevance:</strong> Post-RAI patients with this variant often report persistent symptoms on levothyroxine alone. The variant enzyme accumulates in the Golgi apparatus (instead of ER), reducing its activity. Consider trialing T3 supplementation if T4-only therapy leaves you feeling hypothyroid.</p>
         </div>
 
         <!-- Thyroid Lab Trends -->
@@ -541,15 +541,15 @@
                 <li>
                     <span class="icon">🧬</span>
                     <div>
-                        <strong>T4 Monotherapy is Genetically Supported</strong>
-                        <p style="color: var(--text-secondary);">Your normal DIO2 genotype means you should convert T4→T3 efficiently. However, given RAI ablation, ensure adequate T4 dosing.</p>
+                        <strong>Consider T3 Supplementation</strong>
+                        <p style="color: var(--text-secondary);">Your DIO2 Ala92Ala genotype means reduced T4→T3 conversion. Studies show patients with this variant often feel better on combination T4+T3 therapy vs T4 alone.</p>
                     </div>
                 </li>
                 <li>
                     <span class="icon">⚖️</span>
                     <div>
-                        <strong>Monitor T3/T4 Ratio</strong>
-                        <p style="color: var(--text-secondary);">Current ratio ~87 is reasonable. If T3 drops while T4 is adequate, consider evaluation despite normal genetics.</p>
+                        <strong>Monitor T3/T4 Ratio Closely</strong>
+                        <p style="color: var(--text-secondary);">With impaired DIO2, your T3 levels may be lower than expected for a given T4 level. A low T3/T4 ratio could indicate conversion issues.</p>
                     </div>
                 </li>
                 <li>
@@ -594,8 +594,8 @@
                         <td>DIO2</td>
                         <td>rs225014</td>
                         <td>CC</td>
-                        <td class="green">Normal (Thr92Thr)</td>
-                        <td>Standard T4→T3 conversion</td>
+                        <td class="yellow">Variant (Ala92Ala)</td>
+                        <td>Reduced T4→T3 conversion - consider T3</td>
                     </tr>
                     <tr>
                         <td>DIO2</td>
