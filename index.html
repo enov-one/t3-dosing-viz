@@ -893,50 +893,62 @@
                 </p>
             </div>
 
-            <h3 style="color: var(--text-primary); margin: 24px 0 12px; font-size: 16px;">
-                Validation Strategy for New Data
+            <h3 style="color: var(--blue); margin: 32px 0 16px; font-size: 18px; border-bottom: 2px solid var(--blue); padding-bottom: 8px;">
+                🔬 Validation Strategy for New Data
             </h3>
-            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; line-height: 1.7;">
                 To confirm these algorithms give correct answers when applied to Ariel's newer data (or anyone else's data),
-                use <strong style="color: var(--text-primary);">temporal validation</strong>:
+                use <strong style="color: var(--text-primary);">temporal validation</strong>. Two complementary approaches:
             </p>
 
-            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-                <p style="color: var(--text-primary); font-weight: 600; margin-bottom: 8px; font-size: 14px;">
-                    Step 1: Temporal Hold-Out Testing
+            <div style="background: rgba(56,189,248,0.05); border-left: 4px solid var(--blue); border-radius: 10px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span style="background: var(--blue); color: white; font-weight: 700; font-size: 16px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">1</span>
+                    <p style="color: var(--blue); font-weight: 700; margin: 0; font-size: 16px;">
+                        Temporal Hold-Out Testing
+                    </p>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.8; margin-bottom: 12px;">
+                    <strong style="color: var(--text-primary);">What:</strong> Split data chronologically. Train on old data, test on new data you haven't shown the model.<br>
+                    <strong style="color: var(--text-primary);">Example:</strong> Train on all data through Jan 15, 2026 → Predict on Jan 16 - Feb 28, 2026.<br>
+                    <strong style="color: var(--text-primary);">Check:</strong> MAE still ~18? Direction accuracy still ~72%? Meditation still +7.4 pts? Cycle amplitude still ~14 pts?
                 </p>
-                <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.7;">
-                    <strong>Train</strong> the models on older data (e.g., all data through Jan 15, 2026).<br>
-                    <strong>Test</strong> on newer data (e.g., Jan 16 - Feb 28, 2026).<br>
-                    <strong>Measure:</strong> Does the Recovery Predictor's accuracy hold? (MAE ~18, direction ~72%)<br>
-                    Does meditation still show +7.4 recovery effect? Does the cycle amplitude stay ~14 points?
-                </p>
+                <div class="metrics-row" style="gap: 8px;">
+                    <div class="metric-pill" style="font-size: 12px;"><span class="val" style="color: var(--blue);">Pro:</span> Standard ML validation</div>
+                    <div class="metric-pill" style="font-size: 12px;"><span class="val" style="color: var(--text-secondary);">Con:</span> One-time test</div>
+                </div>
             </div>
 
-            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-                <p style="color: var(--text-primary); font-weight: 600; margin-bottom: 8px; font-size: 14px;">
-                    Step 2: Prospective Prediction Log
+            <div style="background: rgba(34,197,94,0.05); border-left: 4px solid var(--green); border-radius: 10px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span style="background: var(--green); color: white; font-weight: 700; font-size: 16px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">2</span>
+                    <p style="color: var(--green); font-weight: 700; margin: 0; font-size: 16px;">
+                        Prospective Prediction Log
+                    </p>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.8; margin-bottom: 12px;">
+                    <strong style="color: var(--text-primary);">What:</strong> Real-world validation. Predict each evening, compare to actual next morning.<br>
+                    <strong style="color: var(--text-primary);">Process:</strong> Evening of Day N → Model predicts tomorrow's recovery → Morning of Day N+1 → Whoop reports actual → Log: (date, predicted, actual, error, direction_correct).<br>
+                    <strong style="color: var(--text-primary);">After 30 days:</strong> Calculate rolling MAE, direction accuracy, calibration curves.
                 </p>
-                <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.7;">
-                    Each evening, the model predicts tomorrow's recovery.<br>
-                    Next morning, Whoop reports the actual recovery.<br>
-                    Log: (date, predicted, actual, error, direction_correct).<br>
-                    After 30 days, check if performance metrics remain stable.
-                </p>
+                <div class="metrics-row" style="gap: 8px;">
+                    <div class="metric-pill" style="font-size: 12px;"><span class="val" style="color: var(--green);">Pro:</span> Catches model drift over time</div>
+                    <div class="metric-pill" style="font-size: 12px;"><span class="val" style="color: var(--text-secondary);">Con:</span> Takes 30+ days</div>
+                </div>
             </div>
 
-            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
-                <p style="color: var(--text-primary); font-weight: 600; margin-bottom: 8px; font-size: 14px;">
-                    Step 3: Automated Validation Script (Optional)
-                </p>
-                <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.7;">
-                    Build a script that automatically runs Steps 1 & 2 and generates a validation report showing:<br>
-                    • Out-of-sample MAE on new dates<br>
-                    • Behavior effect replication (does meditation still work?)<br>
-                    • Cycle pattern consistency (does the harmonic fit hold?)<br>
-                    • Feature importance stability (do the same features matter?)<br>
-                    <br>
-                    This is just automation of the manual steps above, not a distinct validation approach.
+            <div style="background: rgba(148,163,184,0.05); border-left: 4px solid var(--text-secondary); border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span style="background: var(--text-secondary); color: white; font-weight: 700; font-size: 16px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">+</span>
+                    <p style="color: var(--text-secondary); font-weight: 700; margin: 0; font-size: 16px;">
+                        Optional: Automated Validation Script
+                    </p>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.8; margin-bottom: 0;">
+                    <strong style="color: var(--text-primary);">Not a separate strategy</strong> — just automation of Steps 1 & 2 above.
+                    Build a script that runs both validation approaches and generates an HTML report showing out-of-sample MAE,
+                    behavior effect replication, cycle pattern consistency, and feature importance stability.
+                    Saves manual work when you have new data.
                 </p>
             </div>
         </div>
