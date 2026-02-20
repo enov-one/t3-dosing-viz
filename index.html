@@ -641,6 +641,102 @@
                     </a>
                 </div>
             </div>
+
+            <!-- Experiment 7: Exploratory Predictive -->
+            <div class="experiment" style="border: 2px solid var(--blue);">
+                <div class="experiment-header" style="background: rgba(56,189,248,0.06);">
+                    <span class="experiment-num" style="background: var(--blue);">Exp. 7</span>
+                    <div class="experiment-title" style="color: var(--blue);">
+                        Exploratory Predictive Analysis &mdash; Hypothesis Testing
+                    </div>
+                    <span class="experiment-date">Feb 19, 2026</span>
+                </div>
+                <div class="experiment-body">
+                    <p>
+                        <strong>Purpose:</strong> Before building predictive algorithms, test 5 core hypotheses about
+                        wearable signal patterns to determine which approaches are viable.
+                    </p>
+
+                    <div class="result-box result-success">
+                        <div class="result-label">4 of 5 hypotheses confirmed</div>
+                        <p style="margin: 0;">
+                            <strong>Q1 (Concordance):</strong> ✓ A+ protocols have distinct inter-signal correlation fingerprint (Frobenius distance = 0.854).<br>
+                            <strong>Q2 (Discrimination):</strong> ✓ Individual signals can separate A+ from non-A+ days.<br>
+                            <strong>Q3 (Circadian):</strong> ✗ Within-day HR patterns show weak protocol differences.<br>
+                            <strong>Q4 (Phase Confound):</strong> ✓ Menstrual phase causes minimal confounding across protocols.<br>
+                            <strong>Q5 (Transitions):</strong> ✓ Change-points detectable at dose transitions.
+                        </p>
+                    </div>
+
+                    <p>
+                        <strong>Key finding:</strong> The <span class="highlight">Allostatic Concordance Index (ACI)</span>
+                        — a composite metric measuring how well wearable signals "agree" with each other — successfully
+                        validates as a protocol quality indicator. A+ protocols cluster together (mean distance from A+ template = 0.269),
+                        while non-A+ protocols are farther away (mean distance = 0.959).
+                    </p>
+
+                    <p>
+                        <strong>Generalizability:</strong> Q2 (signal discrimination) and Q4 (menstrual confounding) are
+                        generalizable to anyone tracking "good days" vs. "bad days" with Whoop. No thyroid protocols required.
+                    </p>
+
+                    <a href="exploratory-predictive.html" class="dashboard-link" style="background: rgba(56,189,248,0.15); border: 1px solid var(--blue);">
+                        View Exploratory Predictive Dashboard &rarr;
+                    </a>
+                </div>
+            </div>
+
+            <!-- Experiment 8: Recovery Intelligence -->
+            <div class="experiment" style="border: 2px solid var(--green);">
+                <div class="experiment-header" style="background: rgba(34,197,94,0.06);">
+                    <span class="experiment-num" style="background: var(--green);">Exp. 8</span>
+                    <div class="experiment-title" style="color: var(--green);">
+                        Personal Recovery Intelligence Engine
+                    </div>
+                    <span class="experiment-date">Feb 19, 2026</span>
+                </div>
+                <div class="experiment-body">
+                    <p>
+                        <strong>Purpose:</strong> Build a generalizable 3-module engine for personal health optimization
+                        that works for anyone with Whoop — no thyroid experiments required.
+                    </p>
+
+                    <div class="result-box result-success">
+                        <div class="result-label">Success &mdash; 72% direction accuracy + 1 FDR-significant behavior</div>
+                        <p style="margin: 0;">
+                            <strong>Module 1 (Cycle Baselines):</strong> Menstrual cycle explains 4.5% of recovery variance,
+                            14-point swing peak-to-trough. Harmonic regression separates cycle effects from true anomalies.<br>
+                            <strong>Module 2 (Recovery Predictor):</strong> 72% direction accuracy predicting next-day recovery.
+                            MAE = 18.1 (beats naive baseline of 20.5). Top features: 3-day recovery mean, sleep consistency, strain.<br>
+                            <strong>Module 3 (Behavior Impact):</strong> <span class="highlight">Meditation: +7.4 recovery points
+                            (p=0.009, FDR-significant)</span>. Proper N=1 statistics with confounder adjustment and multiple testing correction.
+                        </p>
+                    </div>
+
+                    <div class="metrics-row">
+                        <div class="metric-pill"><span class="val" style="color: var(--green);">Meditation:</span> +7.4 pts (p=0.009, n=115)</div>
+                        <div class="metric-pill"><span class="val" style="color: var(--red);">Caffeine:</span> -21.7 pts (p=0.028, n=19)</div>
+                        <div class="metric-pill"><span class="val" style="color: var(--yellow);">Morning Sun:</span> -13.5 pts (p=0.038, n=12)</div>
+                    </div>
+
+                    <p>
+                        <strong>Why this matters:</strong> Most people run N=1 experiments incorrectly (no controls, no statistics,
+                        confounded by menstrual cycle). This engine provides <span class="highlight">proper causal inference</span>
+                        for personal behaviors: Mann-Whitney U tests, Cohen's d effect sizes, confounder-adjusted regression,
+                        bootstrap confidence intervals, and Benjamini-Hochberg FDR correction.
+                    </p>
+
+                    <p>
+                        <strong>Generalizability:</strong> Works for anyone with Whoop. No medication experiments needed.
+                        Just needs daily wearable data + behavior journaling. Can answer: "Does magnesium actually help my recovery?"
+                        with statistical rigor.
+                    </p>
+
+                    <a href="recovery-intelligence.html" class="dashboard-link" style="background: rgba(34,197,94,0.15); border: 1px solid var(--green);">
+                        View Recovery Intelligence Dashboard &rarr;
+                    </a>
+                </div>
+            </div>
         </div>
 
         <!-- SECTION: Current Status -->
