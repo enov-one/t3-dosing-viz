@@ -736,6 +736,115 @@
             </div>
         </div>
 
+        <!-- SECTION: Next Steps -->
+        <div class="section">
+            <h2 class="section-title">Next Steps: Generalizable Algorithms</h2>
+
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                Most of the dashboards above are specific to Ariel's thyroid dosing experiments.
+                However, <strong style="color: var(--text-primary);">two algorithms are generalizable</strong> and can work
+                for anyone with a Whoop wearable — no thyroid condition or medication experiments required.
+            </p>
+
+            <div style="background: rgba(56,189,248,0.08); border-left: 4px solid var(--blue); padding: 16px 20px; border-radius: 8px; margin-bottom: 16px;">
+                <h3 style="color: var(--blue); margin-bottom: 8px; font-size: 16px;">
+                    ✅ Recovery Intelligence Engine
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.7; margin-bottom: 12px;">
+                    <strong style="color: var(--text-primary);">What it is:</strong> A 3-module predictive engine that learns your personal physiology
+                    and helps you optimize daily behaviors.
+                </p>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.7; margin-bottom: 12px;">
+                    <strong style="color: var(--text-primary);">What it does:</strong>
+                </p>
+                <ul style="color: var(--text-secondary); font-size: 14px; line-height: 2; padding-left: 20px;">
+                    <li><strong>Menstrual Cycle Baselines:</strong> If you menstruate, it learns your normal 14-point recovery swing
+                    across your cycle using harmonic regression. This prevents you from panicking when recovery dips mid-follicular
+                    phase — it's just your cycle, not a problem.</li>
+                    <li><strong>Next-Day Recovery Predictor:</strong> Predicts tomorrow's recovery score <em>tonight</em> with 72%
+                    direction accuracy. Uses 43 features (sleep architecture, strain, behaviors, cycle phase, rolling averages).
+                    Tells you which factors are pulling recovery up or down.</li>
+                    <li><strong>Behavior Impact Scorecard:</strong> Runs proper statistics (Mann-Whitney U, confounder-adjusted regression,
+                    FDR correction) to tell you which of your tracked behaviors <em>actually work</em>. For Ariel: meditation showed
+                    +7.4 recovery points (p=0.009, FDR-significant). Caffeine showed -21.7 points but with high variance.</li>
+                </ul>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.7; margin-top: 12px;">
+                    <strong style="color: var(--text-primary);">Who it's for:</strong> Anyone with Whoop who wants to run N=1 experiments
+                    ("Does magnesium actually help my recovery?") or predict bad days before they happen.
+                </p>
+            </div>
+
+            <div style="background: rgba(56,189,248,0.08); border-left: 4px solid var(--blue); padding: 16px 20px; border-radius: 8px; margin-bottom: 16px;">
+                <h3 style="color: var(--blue); margin-bottom: 8px; font-size: 16px;">
+                    ✅ Exploratory Predictive Analysis (Partial)
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.7; margin-bottom: 12px;">
+                    <strong style="color: var(--text-primary);">What it is:</strong> Tests 5 hypotheses about wearable signal patterns.
+                    Two are generalizable without medication experiments.
+                </p>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.7; margin-bottom: 12px;">
+                    <strong style="color: var(--text-primary);">What it does:</strong>
+                </p>
+                <ul style="color: var(--text-secondary); font-size: 14px; line-height: 2; padding-left: 20px;">
+                    <li><strong>Q4: Menstrual Phase Confounding:</strong> Quantifies how much your cycle affects recovery, HRV,
+                    and RHR. Prevents misattributing cycle effects to other variables. Works for anyone who menstruates.</li>
+                    <li><strong>Q2: Signal Discrimination:</strong> Tests which individual Whoop signals (RHR, HRV, sleep efficiency, etc.)
+                    best separate "good days" from "bad days" using your subjective ratings. Tells you which metric to pay attention to.</li>
+                </ul>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.7; margin-top: 12px;">
+                    <strong style="color: var(--text-primary);">Who it's for:</strong> Anyone tracking how they feel day-to-day who wants
+                    to know which wearable signals correlate with their subjective state. Requires journaling "good/bad day" ratings.
+                </p>
+            </div>
+
+            <h3 style="color: var(--text-primary); margin: 24px 0 12px; font-size: 16px;">
+                Validation Strategy for New Data
+            </h3>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+                To confirm these algorithms give correct answers when applied to Ariel's newer data (or anyone else's data),
+                use <strong style="color: var(--text-primary);">temporal validation</strong>:
+            </p>
+
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                <p style="color: var(--text-primary); font-weight: 600; margin-bottom: 8px; font-size: 14px;">
+                    Step 1: Temporal Hold-Out Testing
+                </p>
+                <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.7;">
+                    <strong>Train</strong> the models on older data (e.g., all data through Jan 15, 2026).<br>
+                    <strong>Test</strong> on newer data (e.g., Jan 16 - Feb 28, 2026).<br>
+                    <strong>Measure:</strong> Does the Recovery Predictor's accuracy hold? (MAE ~18, direction ~72%)<br>
+                    Does meditation still show +7.4 recovery effect? Does the cycle amplitude stay ~14 points?
+                </p>
+            </div>
+
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                <p style="color: var(--text-primary); font-weight: 600; margin-bottom: 8px; font-size: 14px;">
+                    Step 2: Prospective Prediction Log
+                </p>
+                <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.7;">
+                    Each evening, the model predicts tomorrow's recovery.<br>
+                    Next morning, Whoop reports the actual recovery.<br>
+                    Log: (date, predicted, actual, error, direction_correct).<br>
+                    After 30 days, check if performance metrics remain stable.
+                </p>
+            </div>
+
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
+                <p style="color: var(--text-primary); font-weight: 600; margin-bottom: 8px; font-size: 14px;">
+                    Step 3: Automated Validation Script (Optional)
+                </p>
+                <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.7;">
+                    Build a script that automatically runs Steps 1 & 2 and generates a validation report showing:<br>
+                    • Out-of-sample MAE on new dates<br>
+                    • Behavior effect replication (does meditation still work?)<br>
+                    • Cycle pattern consistency (does the harmonic fit hold?)<br>
+                    • Feature importance stability (do the same features matter?)<br>
+                    <br>
+                    This is just automation of the manual steps above, not a distinct validation approach.
+                </p>
+            </div>
+        </div>
+
         <div class="footer">
             T3 Dosing Research Journal | Patient: Ariel | Last updated: Feb 19, 2026 |
             Data: Whoop wearable + Medisafe + SelfDecode genetics
