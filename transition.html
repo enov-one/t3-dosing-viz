@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dose Transition Predictor - Ariel</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+    --text: #f1f5f9; --text2: #94a3b8; --accent: #38bdf8;
+    --green: #22c55e; --yellow: #eab308; --red: #ef4444; --orange: #f97316; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background:var(--bg); color:var(--text); padding:32px; line-height:1.6;
+    max-width:1100px; margin:0 auto; }
+  h1 { font-size:24px; font-weight:700; margin-bottom:4px; }
+  h2 { font-size:18px; font-weight:600; margin:36px 0 12px; color:var(--accent);
+    border-bottom:1px solid var(--surface2); padding-bottom:8px; }
+  h3 { font-size:15px; font-weight:600; margin:16px 0 6px; }
+  p { margin:8px 0; font-size:14px; color:var(--text2); }
+  .subtitle { color:var(--text2); font-size:13px; margin-bottom:28px; }
+  .card { background:var(--surface); border-radius:10px; padding:20px;
+    margin-bottom:16px; border:1px solid var(--surface2); }
+  .headline { font-size:20px; font-weight:700; padding:16px 20px; border-radius:10px;
+    margin-bottom:24px; }
+  .headline.positive { background:rgba(34,197,94,0.12); border-left:4px solid var(--green); }
+  .headline.mixed { background:rgba(234,179,8,0.12); border-left:4px solid var(--yellow); }
+  .headline.neutral { background:rgba(148,163,184,0.12); border-left:4px solid var(--text2); }
+  .transition-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:800px) { .transition-grid { grid-template-columns:1fr; } }
+  .t-card { background:var(--surface); border-radius:10px; padding:16px;
+    border:1px solid var(--surface2); }
+  .t-card .t-header { display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:12px; }
+  .t-card .arrow { font-size:20px; margin:0 8px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px;
+    font-size:12px; font-weight:700; }
+  .correct { color:var(--green); } .wrong { color:var(--red); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:6px 10px; text-align:left; border-bottom:1px solid var(--surface2); }
+  th { font-weight:600; color:var(--text2); font-size:12px; text-transform:uppercase; }
+  .delta-pos { color:var(--green); font-weight:600; }
+  .delta-neg { color:var(--red); font-weight:600; }
+  .delta-flat { color:var(--text2); }
+  .chart-container { position:relative; height:300px; margin:16px 0; }
+  .signal-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px;
+    margin:8px 0; font-size:12px; }
+  .signal-cell { background:var(--bg); padding:8px; border-radius:6px; text-align:center; }
+  .signal-cell .val { font-size:16px; font-weight:700; }
+  .signal-cell .lbl { color:var(--text2); margin-top:2px; }
+  footer { margin-top:40px; padding-top:16px; border-top:1px solid var(--surface2);
+    color:var(--text2); font-size:11px; }
+  .explain { background:var(--bg); padding:12px 16px; border-radius:8px;
+    font-size:13px; color:var(--text2); margin:12px 0; }
+  nav { display:flex; gap:8px; padding:15px; background:var(--surface);
+    border-radius:8px; margin-bottom:20px; flex-wrap:wrap; }
+  nav a { color:var(--text2); text-decoration:none; padding:8px 16px;
+    border-radius:6px; transition:all 0.2s; font-size:14px; }
+  nav a:hover { background:var(--surface2); color:var(--text); }
+  nav a.active { background:var(--accent); color:var(--bg); }
+</style>
+</head>
+<body>
+
+<nav>
+            <a href="index.html">Journal</a>
+            <a href="stability.html">Stability</a>
+            <a href="nightsignal.html">NightSignal</a>
+            <a href="acute-response.html">Acute</a>
+            <a href="acute-analysis.html">Acute Analysis</a>
+            <a href="report-card.html">Report Card</a>
+            <a href="transition.html" class="active">Transitions</a>
+            <a href="data-explorer.html">Explorer</a>
+            <a href="pharmacogenomics.html">PGx</a>
+            <a href="thyroid-pgx.html">Thyroid</a>
+            <a href="phenotypes.html">Phenotypes</a>
+            <a href="toi.html">TOI</a>
+            <a href="causal.html">Causal</a>
+            <a href="pk-model.html">PK Model</a>
+            <a href="forecast.html">Forecast</a>
+            <a href="exploratory-predictive.html">Predictive</a>
+            <a href="recovery-intelligence.html">Recovery</a>
+        </nav>
+
+<h1>Can Wearable Data Predict Dose Response?</h1>
+<div class="subtitle">
+  Ariel &middot; 4 dose transitions analyzed &middot;
+  Generated 2026-02-17
+</div>
+
+<div class="headline mixed">Partial — 67% accuracy at 2-day window (4 transitions)</div>
+
+<div class="card">
+<h3>What is the Dose Adequacy Score (DAS)?</h3>
+<p>A single daily number combining 5 wearable signals &mdash; skin temperature, resting HR,
+HRV, recovery score, and deep sleep &mdash; normalized to Ariel's own baseline.
+<strong>Higher = body is functioning better.</strong> Each signal is z-scored against the full
+history, and resting HR is inverted (lower HR = higher score).</p>
+<div class="explain">
+Think of it as: "How well is this patient's body doing today compared to their personal average?"
+A score of +0.5 means half a standard deviation <em>better</em> than average across all signals.
+A score of -0.5 means half a standard deviation <em>worse</em>.
+</div>
+</div>
+
+<h2>DAS Timeline</h2>
+<div class="card">
+<div class="chart-container"><canvas id="timelineChart"></canvas></div>
+<p>Gray dots = daily DAS. Blue line = 7-day rolling average.
+Colored bands = protocol periods. Vertical dashes = dose change dates.</p>
+</div>
+
+<h2>Per-Protocol DAS Summary</h2>
+<div class="card" id="protocolSummary"></div>
+
+<h2>Transition Analysis</h2>
+<p>For each dose change, we compare the DAS in the days before vs. after the change.
+If the DAS moves in the direction that matches the eventual subjective rating, the prediction is correct.</p>
+<div class="transition-grid" id="transitionCards"></div>
+
+<h2>How Fast Can We Predict?</h2>
+<div class="card" id="accuracyTable"></div>
+
+<h2>Per-Signal Breakdown at Each Transition</h2>
+<p>Which specific signals respond, and how fast?</p>
+<div id="signalBreakdown"></div>
+
+<h2>The Clinical Decision Rule</h2>
+<div class="card" id="decisionRule"></div>
+
+<footer>
+  Analysis: dose_transition_predictor.py (stdlib Python) &middot;
+  Visualization: Chart.js 4.4 &middot;
+  Data: Whoop wearable export
+</footer>
+
+<script>
+const DATES = ["2024-10-19", "2024-10-20", "2024-10-21", "2024-10-22", "2024-10-28", "2024-10-29", "2024-11-04", "2024-11-05", "2024-11-06", "2024-11-07", "2024-11-08", "2024-11-09", "2024-11-10", "2024-11-11", "2024-11-13", "2024-11-15", "2024-11-16", "2024-11-17", "2024-11-20", "2024-11-21", "2024-11-22", "2024-11-23", "2024-11-24", "2024-11-26", "2024-11-27", "2024-11-28", "2024-11-29", "2025-01-17", "2025-01-18", "2025-01-19", "2025-01-20", "2025-01-21", "2025-01-22", "2025-01-23", "2025-01-24", "2025-01-25", "2025-01-26", "2025-01-27", "2025-01-28", "2025-01-29", "2025-01-30", "2025-01-31", "2025-02-01", "2025-02-03", "2025-02-04", "2025-02-05", "2025-02-06", "2025-02-07", "2025-02-08", "2025-02-09", "2025-02-10", "2025-02-11", "2025-02-12", "2025-02-13", "2025-02-14", "2025-02-17", "2025-02-19", "2025-02-20", "2025-02-21", "2025-02-22", "2025-02-23", "2025-02-24", "2025-02-25", "2025-02-26", "2025-02-27", "2025-02-28", "2025-03-02", "2025-03-03", "2025-03-04", "2025-03-05", "2025-03-06", "2025-03-07", "2025-03-08", "2025-03-10", "2025-03-11", "2025-03-12", "2025-03-13", "2025-03-14", "2025-03-15", "2025-03-17", "2025-03-18", "2025-03-19", "2025-03-20", "2025-03-22", "2025-03-23", "2025-03-25", "2025-03-26", "2025-03-27", "2025-03-28", "2025-03-29", "2025-03-30", "2025-03-31", "2025-04-03", "2025-04-04", "2025-04-05", "2025-04-06", "2025-04-07", "2025-04-08", "2025-05-15", "2025-05-16", "2025-05-17", "2025-05-18", "2025-05-19", "2025-05-21", "2025-05-22", "2025-05-25", "2025-05-26", "2025-05-28", "2025-05-29", "2025-05-30", "2025-05-31", "2025-06-01", "2025-06-02", "2025-06-07", "2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14", "2025-06-15", "2025-06-16", "2025-06-17", "2025-06-18", "2025-06-19", "2025-06-20", "2025-06-21", "2025-06-22", "2025-06-23", "2025-06-24", "2025-06-25", "2025-06-26", "2025-06-30", "2025-07-01", "2025-07-02", "2025-07-04", "2025-07-05", "2025-07-07", "2025-07-08", "2025-07-09", "2025-07-10", "2025-07-15", "2025-07-16", "2025-07-17", "2025-07-18", "2025-07-19", "2025-07-20", "2025-07-21", "2025-07-23", "2025-07-24", "2025-07-25", "2025-07-26", "2025-07-27", "2025-07-28", "2025-07-29", "2025-07-30", "2025-07-31", "2025-08-01", "2025-08-02", "2025-08-03", "2025-08-04", "2025-08-05", "2025-08-06", "2025-08-07", "2025-08-15", "2025-08-16", "2025-08-17", "2025-08-18", "2025-08-19", "2025-08-23", "2025-08-24", "2025-08-25", "2025-08-26", "2025-08-27", "2025-08-28", "2025-08-29", "2025-08-30", "2025-08-31", "2025-09-01", "2025-09-02", "2025-09-03", "2025-09-04", "2025-09-05", "2025-09-06", "2025-11-18", "2025-11-19", "2025-11-20", "2025-11-21", "2025-11-22", "2025-11-23", "2025-11-24", "2025-11-25", "2025-11-26", "2025-11-27", "2025-11-28", "2025-11-29", "2025-11-30", "2025-12-01", "2025-12-02", "2025-12-03", "2025-12-04", "2025-12-05", "2025-12-06", "2025-12-07", "2025-12-08", "2025-12-09", "2025-12-10", "2025-12-11", "2025-12-12", "2025-12-13", "2025-12-14", "2025-12-15", "2025-12-16", "2025-12-17", "2025-12-18", "2025-12-19", "2025-12-20", "2025-12-21", "2025-12-22", "2025-12-27", "2025-12-28", "2025-12-29", "2025-12-30", "2025-12-31", "2026-01-01", "2026-01-02", "2026-01-03", "2026-01-04", "2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09", "2026-01-10", "2026-01-11", "2026-01-12", "2026-01-14", "2026-01-15", "2026-01-16", "2026-01-18", "2026-01-19", "2026-01-20", "2026-01-21", "2026-01-22", "2026-01-23", "2026-01-24", "2026-01-25", "2026-01-26", "2026-01-27", "2026-01-28"];
+const RAW = [null, 0.3628, 0.1388, null, null, 0.1035, null, -1.7468, -1.9952, -1.2514, -0.8243, -1.7867, -1.076, -1.0519, -0.7456, -0.332, null, -1.2366, null, 0.2755, -0.4178, -1.2343, -0.5102, -0.2604, -0.2755, 0.035, -0.8777, null, 0.7115, 0.2237, 0.25, -0.452, 0.5258, -0.8685, -0.0702, -0.7276, -0.3879, -0.5505, -0.1547, 0.0321, -0.2654, -0.863, -0.3473, -0.2568, 0.4816, 0.0434, -0.2648, 0.2982, -0.2232, -0.5063, 0.2623, -0.554, -0.5591, -0.2467, -0.8098, -0.7387, -0.0604, -0.6992, -0.6752, 0.0808, 0.4674, 0.5198, 0.4982, 0.5461, -0.3092, -0.4887, 0.0585, 0.047, -0.0982, -0.6856, -0.8766, -0.5695, -0.7664, null, null, -0.0387, -0.5162, -0.2965, -0.4329, -0.383, -0.3594, 0.865, -0.2839, 0.1108, -0.2629, null, 0.1843, -0.0633, -0.0003, 0.1332, 0.2155, 0.2792, null, -0.3699, -0.88, -0.031, -0.856, null, null, 0.2048, -0.2128, 0.3527, -0.3912, 0.1304, -0.577, null, -0.5552, null, 0.1066, 0.7458, -0.2653, 0.4303, -0.3538, null, 0.4054, -0.1775, 0.6595, 0.5477, 0.0683, 0.5527, 0.7028, -0.0571, 0.0915, -0.5579, 0.1355, 0.2159, 0.3622, 0.2064, -0.2324, -0.4139, -0.3453, -0.5227, -1.2739, null, null, 0.4174, null, -0.6807, 0.0994, -0.6642, -0.4497, -0.7089, null, -0.3458, -1.2841, -0.8982, -0.946, -0.4997, -1.6703, -0.4191, 0.0908, 0.3349, 1.188, -0.1481, -0.7421, -0.7438, -0.9744, -0.6398, -0.567, -0.3595, 0.3252, 0.2029, 0.4822, 0.8362, 0.2949, null, 0.5415, -0.4492, -0.8804, null, null, -0.8434, -0.4638, -0.4811, -0.1058, -0.0172, 0.2387, 0.5554, -0.0311, 0.5346, -0.7336, -0.7822, -0.3787, -0.2928, 0.4322, null, 0.1354, -0.4421, -0.709, 0.1393, 0.9248, 0.6561, -1.532, -0.0975, 0.1469, -0.6842, 0.1291, -0.6227, -0.3442, -0.0433, 0.2377, -0.1719, 0.0491, -0.5151, -0.4522, 0.3425, -0.0264, -0.579, -0.2652, 0.6926, 0.1562, 0.61, 0.0837, -0.4499, 0.2688, -0.2543, -0.4198, null, 0.7156, 0.1004, null, -0.1679, 0.0142, 0.1458, -1.3827, -0.7083, -0.6835, 0.1134, 0.4167, -0.6828, -0.0523, -0.0372, -0.156, -0.0586, -0.2972, -0.3633, -0.6342, -0.4961, null, 0.3646, null, -0.1264, -0.0091, -0.3516, -0.3868, null, 0.497, 0.3678, -0.3861, -0.1247, 0.4512];
+const MA3 = [0.3903, -0.0214, 0.2508, 0.2508, 0.1388, 0.1035, 0.1035, -0.8216, -1.871, -1.6645, -1.357, -1.2875, -1.229, -1.3049, -0.9578, -0.7098, -0.5388, -0.7843, -1.2366, -0.4805, -0.0711, -0.4589, -0.7208, -0.6683, -0.3487, -0.167, -0.3727, -0.4214, -0.0831, 0.4676, 0.3951, 0.0072, 0.1079, -0.2649, -0.1376, -0.5554, -0.3952, -0.5553, -0.3644, -0.2244, -0.1293, -0.3654, -0.4919, -0.489, -0.0408, 0.0894, 0.0867, 0.0256, -0.0633, -0.1438, -0.1557, -0.266, -0.2836, -0.4533, -0.5385, -0.5984, -0.5363, -0.4994, -0.4783, -0.4312, -0.0423, 0.356, 0.4951, 0.5214, 0.245, -0.0839, -0.2465, -0.1277, 0.0024, -0.2456, -0.5535, -0.7106, -0.7375, -0.668, -0.7664, -0.0387, -0.2774, -0.2838, -0.4152, -0.3708, -0.3918, 0.0409, 0.0739, 0.2306, -0.1453, -0.0761, -0.0393, 0.0605, 0.0402, 0.0232, 0.1161, 0.2093, 0.2474, -0.0454, -0.625, -0.427, -0.589, -0.4435, -0.856, 0.2048, -0.004, 0.1149, -0.0838, 0.0306, -0.2793, -0.2233, -0.5661, -0.5552, -0.2243, 0.4262, 0.1957, 0.3036, -0.0629, 0.0383, 0.0258, 0.1139, 0.2958, 0.3432, 0.4252, 0.3896, 0.4413, 0.3995, 0.2457, -0.1745, -0.1103, -0.0688, 0.2379, 0.2615, 0.1121, -0.1466, -0.3305, -0.4273, -0.714, -0.8983, -1.2739, 0.4174, 0.4174, -0.1316, -0.2906, -0.4152, -0.3382, -0.6076, -0.5793, -0.5273, -0.815, -0.8427, -1.0428, -0.7813, -1.0387, -0.863, -0.6662, 0.0022, 0.5379, 0.4583, 0.0993, -0.5447, -0.8201, -0.786, -0.7271, -0.5221, -0.2004, 0.0562, 0.3368, 0.5071, 0.5378, 0.5655, 0.4182, 0.0461, -0.2627, -0.6648, -0.8804, -0.8434, -0.6536, -0.5961, -0.3502, -0.2014, 0.0386, 0.259, 0.2543, 0.353, -0.0767, -0.3271, -0.6315, -0.4846, -0.0798, 0.0697, 0.2838, -0.1533, -0.3386, -0.3373, 0.1184, 0.5734, 0.0163, -0.3245, -0.4942, -0.2116, -0.1361, -0.3926, -0.2793, -0.3367, -0.0499, 0.0075, 0.0383, -0.2126, -0.3061, -0.2083, -0.0454, -0.0876, -0.2902, -0.0505, 0.1945, 0.4863, 0.2833, 0.0813, -0.0325, -0.1451, -0.1351, -0.3371, 0.1479, 0.408, 0.408, -0.0337, -0.0769, -0.0026, -0.4076, -0.6484, -0.9248, -0.4261, -0.0511, -0.0509, -0.1061, -0.2574, -0.0818, -0.0839, -0.1706, -0.2397, -0.4316, -0.4979, -0.5652, -0.0658, 0.3646, 0.1191, -0.0678, -0.1624, -0.2492, -0.3692, 0.0551, 0.4324, 0.1596, -0.0477, -0.0199];
+const MA7 = [0.3471, 0.3503, 0.402, 0.402, 0.3206, 0.0499, 0.2017, -0.2854, -0.8749, -1.2225, -1.1428, -1.2501, -1.4467, -1.3903, -1.2473, -1.0097, -0.9694, -1.0381, -0.8884, -0.6181, -0.4913, -0.589, -0.6247, -0.564, -0.4038, -0.3411, -0.5058, -0.5205, -0.1962, -0.0739, 0.0112, -0.0182, 0.0636, 0.0651, 0.0458, -0.1598, -0.2472, -0.3616, -0.3191, -0.3896, -0.3035, -0.4167, -0.3624, -0.3437, -0.1962, -0.1679, -0.2103, -0.1298, -0.0384, -0.0611, 0.013, -0.1349, -0.221, -0.2184, -0.3767, -0.4503, -0.3866, -0.524, -0.5413, -0.4499, -0.3479, -0.1579, 0.0188, 0.1054, 0.1611, 0.1878, 0.1846, 0.1245, 0.0362, -0.1329, -0.3361, -0.3733, -0.413, -0.4915, -0.5993, -0.5874, -0.5535, -0.4375, -0.4101, -0.3335, -0.3378, -0.166, -0.201, -0.1114, -0.1066, -0.0522, 0.0423, 0.0917, -0.0526, 0.017, 0.0344, 0.1248, 0.1248, 0.0324, -0.1037, -0.1088, -0.2737, -0.3715, -0.5342, -0.3864, -0.355, -0.1085, -0.1805, 0.0168, -0.0822, -0.0822, -0.2088, -0.2081, -0.2573, -0.0299, -0.109, 0.0924, 0.0181, 0.1327, 0.1782, 0.1308, 0.1164, 0.2519, 0.1916, 0.3427, 0.3941, 0.3281, 0.3665, 0.1926, 0.1337, 0.1548, 0.1276, 0.0566, 0.0316, -0.0406, -0.0102, -0.1043, -0.3171, -0.4303, -0.5576, -0.4277, -0.4311, -0.515, -0.3594, -0.207, -0.2556, -0.3311, -0.4808, -0.4583, -0.5589, -0.7252, -0.7721, -0.7804, -0.9407, -0.8662, -0.8038, -0.5725, -0.2745, -0.1605, -0.1951, -0.0628, -0.1421, -0.2465, -0.3753, -0.5964, -0.5288, -0.3938, -0.2186, 0.04, 0.1736, 0.297, 0.4471, 0.3181, 0.1375, 0.0686, -0.1233, -0.4079, -0.4191, -0.6236, -0.5549, -0.3823, -0.2788, -0.1596, -0.0436, 0.0991, 0.063, -0.0336, -0.0853, -0.1612, -0.1788, -0.2034, -0.27, -0.2214, -0.2092, -0.1228, 0.0801, 0.1174, -0.1182, -0.1515, -0.0673, -0.0638, -0.0653, -0.2863, -0.4292, -0.2166, -0.1687, -0.2142, -0.1095, -0.2015, -0.1771, -0.079, -0.0766, -0.1933, -0.2066, -0.1147, -0.0188, 0.133, 0.096, 0.0355, 0.1566, 0.1582, -0.0008, -0.0269, -0.0093, -0.0065, 0.0821, -0.0052, 0.0485, 0.1616, -0.0958, -0.3331, -0.4637, -0.3813, -0.2978, -0.3973, -0.4256, -0.2334, -0.1545, -0.0653, -0.1239, -0.2353, -0.2284, -0.2918, -0.3342, -0.2475, -0.2852, -0.2511, -0.1802, -0.1237, -0.1019, -0.1019, -0.0754, -0.0015, -0.0448, -0.0641, 0.0697];
+const PROTO_IDS = [null, null, null, null, "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P1", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P2", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", "P3", null, null, null, "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P5", "P6", "P6", "P6", "P6", "P6", "P6", "P6", "P6", "P6", "P6", "P6", null, null, "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7", "P7"];
+const PROTO_COLORS = {"P1": "#fb923c", "P2": "#22c55e", "P3": "#22c55e", "P4": "#b91c1c", "P5": "#60a5fa", "P6": "#fbbf24", "P7": "#22c55e"};
+const PROTOS = [{"id": "P1", "label": "T4=100 / T3=0", "rating": "C", "start": "2024-10-25", "end": "2025-01-29", "feeling": "Cold, less active"}, {"id": "P2", "label": "T4=88 / T3=5", "rating": "A+", "start": "2025-01-30", "end": "2025-03-26", "feeling": "Clear, energized, happy"}, {"id": "P3", "label": "T4=75 / T3=10", "rating": "A+", "start": "2025-03-27", "end": "2025-10-03", "feeling": "Happy, clear, great dose"}, {"id": "P4", "label": "T4=75 / T3=7.5", "rating": "F", "start": "2025-10-18", "end": "2025-10-28", "feeling": "STRUGGLING"}, {"id": "P5", "label": "T4=88 / T3=5 (2nd)", "rating": "B+", "start": "2025-11-21", "end": "2025-12-09", "feeling": "Sharp, focused, cold"}, {"id": "P6", "label": "T4=88 / T3=7.5", "rating": "B-", "start": "2025-12-10", "end": "2025-12-20", "feeling": "Warm, overactivated"}, {"id": "P7", "label": "T4=82 / T3=6.25", "rating": "A+", "start": "2025-12-24", "end": "2026-01-29", "feeling": "Warm, stable, great"}];
+const TRANSITIONS = [{"from_id": "P1", "from_label": "T4=100 / T3=0", "from_rating": "C", "to_id": "P2", "to_label": "T4=88 / T3=5", "to_rating": "A+", "change_date": "2025-01-30", "gap_days": 1, "pre_mean": -0.2472, "pre_n": 7, "post_windows": {"1": {"mean": -0.2654, "n": 1, "delta": -0.0182, "delta_pct": -7.4}, "2": {"mean": -0.5642, "n": 2, "delta": -0.317, "delta_pct": -128.2}, "3": {"mean": -0.4919, "n": 3, "delta": -0.2447, "delta_pct": -99.0}, "5": {"mean": -0.4331, "n": 4, "delta": -0.1859, "delta_pct": -75.2}, "7": {"mean": -0.2012, "n": 6, "delta": 0.046, "delta_pct": 18.6}, "10": {"mean": -0.1553, "n": 9, "delta": 0.0919, "delta_pct": 37.2}, "14": {"mean": -0.2119, "n": 13, "delta": 0.0353, "delta_pct": 14.3}}, "post_by_day": [{"date": "2025-01-30", "day": 1, "das": -0.2654}, {"date": "2025-01-31", "day": 2, "das": -0.863}, {"date": "2025-02-01", "day": 3, "das": -0.3473}, {"date": "2025-02-02", "day": 4, "das": null}, {"date": "2025-02-03", "day": 5, "das": -0.2568}, {"date": "2025-02-04", "day": 6, "das": 0.4816}, {"date": "2025-02-05", "day": 7, "das": 0.0434}, {"date": "2025-02-06", "day": 8, "das": -0.2648}, {"date": "2025-02-07", "day": 9, "das": 0.2982}, {"date": "2025-02-08", "day": 10, "das": -0.2232}, {"date": "2025-02-09", "day": 11, "das": -0.5063}, {"date": "2025-02-10", "day": 12, "das": 0.2623}, {"date": "2025-02-11", "day": 13, "das": -0.554}, {"date": "2025-02-12", "day": 14, "das": -0.5591}, {"date": "2025-02-13", "day": 15, "das": -0.2467}, {"date": "2025-02-14", "day": 16, "das": -0.8098}, {"date": "2025-02-15", "day": 17, "das": null}, {"date": "2025-02-16", "day": 18, "das": null}, {"date": "2025-02-17", "day": 19, "das": -0.7387}, {"date": "2025-02-18", "day": 20, "das": null}, {"date": "2025-02-19", "day": 21, "das": -0.0604}], "signal_changes": {"skin_temp_c": {"pre_mean": 33.27, "post_7d_mean": 33.2, "delta": -0.07, "pre_n": 7, "post_n": 6}, "resting_hr": {"pre_mean": 59.0, "post_7d_mean": 59.5, "delta": 0.5, "pre_n": 7, "post_n": 6}, "hrv_rmssd_ms": {"pre_mean": 33.83, "post_7d_mean": 34.14, "delta": 0.31, "pre_n": 7, "post_n": 6}, "recovery_score": {"pre_mean": 49.0, "post_7d_mean": 62.0, "delta": 13.0, "pre_n": 7, "post_n": 6}, "deep_sleep_min": {"pre_mean": 91.54, "post_7d_mean": 86.93, "delta": -4.61, "pre_n": 7, "post_n": 6}}, "actual_outcome": "IMPROVEMENT", "from_feeling": "Cold, less active", "to_feeling": "Clear, energized, happy"}, {"from_id": "P2", "from_label": "T4=88 / T3=5", "from_rating": "A+", "to_id": "P3", "to_label": "T4=75 / T3=10", "to_rating": "A+", "change_date": "2025-03-27", "gap_days": 1, "pre_mean": -0.0184, "pre_n": 7, "post_windows": {"1": {"mean": -0.0633, "n": 1, "delta": -0.0449, "delta_pct": -243.2}, "2": {"mean": -0.0318, "n": 2, "delta": -0.0134, "delta_pct": -72.4}, "3": {"mean": 0.0232, "n": 3, "delta": 0.0416, "delta_pct": 225.8}, "5": {"mean": 0.1129, "n": 5, "delta": 0.1313, "delta_pct": 711.9}, "7": {"mean": 0.1129, "n": 5, "delta": 0.1313, "delta_pct": 711.9}, "10": {"mean": -0.0979, "n": 7, "delta": -0.0795, "delta_pct": -431.1}, "14": {"mean": -0.1747, "n": 9, "delta": -0.1563, "delta_pct": -847.4}}, "post_by_day": [{"date": "2025-03-27", "day": 1, "das": -0.0633}, {"date": "2025-03-28", "day": 2, "das": -0.0003}, {"date": "2025-03-29", "day": 3, "das": 0.1332}, {"date": "2025-03-30", "day": 4, "das": 0.2155}, {"date": "2025-03-31", "day": 5, "das": 0.2792}, {"date": "2025-04-01", "day": 6, "das": null}, {"date": "2025-04-02", "day": 7, "das": null}, {"date": "2025-04-03", "day": 8, "das": null}, {"date": "2025-04-04", "day": 9, "das": -0.3699}, {"date": "2025-04-05", "day": 10, "das": -0.88}, {"date": "2025-04-06", "day": 11, "das": -0.031}, {"date": "2025-04-07", "day": 12, "das": -0.856}, {"date": "2025-04-08", "day": 13, "das": null}, {"date": "2025-04-09", "day": 14, "das": null}, {"date": "2025-04-10", "day": 15, "das": null}, {"date": "2025-04-11", "day": 16, "das": null}, {"date": "2025-04-12", "day": 17, "das": null}, {"date": "2025-04-13", "day": 18, "das": null}, {"date": "2025-04-14", "day": 19, "das": null}, {"date": "2025-04-15", "day": 20, "das": null}, {"date": "2025-04-16", "day": 21, "das": null}], "signal_changes": {"skin_temp_c": {"pre_mean": 34.06, "post_7d_mean": 33.65, "delta": -0.41, "pre_n": 7, "post_n": 5}, "resting_hr": {"pre_mean": 61.0, "post_7d_mean": 58.6, "delta": -2.4, "pre_n": 7, "post_n": 5}, "hrv_rmssd_ms": {"pre_mean": 30.69, "post_7d_mean": 32.93, "delta": 2.23, "pre_n": 7, "post_n": 5}, "recovery_score": {"pre_mean": 64.86, "post_7d_mean": 73.4, "delta": 8.54, "pre_n": 7, "post_n": 5}, "deep_sleep_min": {"pre_mean": 97.77, "post_7d_mean": 95.1, "delta": -2.67, "pre_n": 7, "post_n": 5}}, "actual_outcome": "STABLE", "from_feeling": "Clear, energized, happy", "to_feeling": "Happy, clear, great dose"}, {"from_id": "P5", "from_label": "T4=88 / T3=5 (2nd)", "from_rating": "B+", "to_id": "P6", "to_label": "T4=88 / T3=7.5", "to_rating": "B-", "change_date": "2025-12-10", "gap_days": 1, "pre_mean": -0.2015, "pre_n": 7, "post_windows": {"1": {"mean": -0.579, "n": 1, "delta": -0.3775, "delta_pct": -187.4}, "2": {"mean": -0.4221, "n": 2, "delta": -0.2206, "delta_pct": -109.5}, "3": {"mean": -0.0505, "n": 3, "delta": 0.151, "delta_pct": 74.9}, "5": {"mean": 0.1229, "n": 5, "delta": 0.3244, "delta_pct": 161.0}, "7": {"mean": 0.0355, "n": 7, "delta": 0.237, "delta_pct": 117.6}, "10": {"mean": -0.0157, "n": 10, "delta": 0.1858, "delta_pct": 92.2}, "14": {"mean": -0.0157, "n": 10, "delta": 0.1858, "delta_pct": 92.2}}, "post_by_day": [{"date": "2025-12-10", "day": 1, "das": -0.579}, {"date": "2025-12-11", "day": 2, "das": -0.2652}, {"date": "2025-12-12", "day": 3, "das": 0.6926}, {"date": "2025-12-13", "day": 4, "das": 0.1562}, {"date": "2025-12-14", "day": 5, "das": 0.61}, {"date": "2025-12-15", "day": 6, "das": 0.0837}, {"date": "2025-12-16", "day": 7, "das": -0.4499}, {"date": "2025-12-17", "day": 8, "das": 0.2688}, {"date": "2025-12-18", "day": 9, "das": -0.2543}, {"date": "2025-12-19", "day": 10, "das": -0.4198}, {"date": "2025-12-20", "day": 11, "das": null}], "signal_changes": {"skin_temp_c": {"pre_mean": 34.37, "post_7d_mean": 34.1, "delta": -0.27, "pre_n": 7, "post_n": 7}, "resting_hr": {"pre_mean": 61.14, "post_7d_mean": 58.43, "delta": -2.71, "pre_n": 7, "post_n": 7}, "hrv_rmssd_ms": {"pre_mean": 28.26, "post_7d_mean": 30.12, "delta": 1.87, "pre_n": 7, "post_n": 7}, "recovery_score": {"pre_mean": 46.83, "post_7d_mean": 57.71, "delta": 10.88, "pre_n": 6, "post_n": 7}, "deep_sleep_min": {"pre_mean": 90.57, "post_7d_mean": 95.23, "delta": 4.66, "pre_n": 6, "post_n": 7}}, "actual_outcome": "DECLINE", "from_feeling": "Sharp, focused, cold", "to_feeling": "Warm, overactivated"}, {"from_id": "P6", "from_label": "T4=88 / T3=7.5", "from_rating": "B-", "to_id": "P7", "to_label": "T4=82 / T3=6.25", "to_rating": "A+", "change_date": "2025-12-24", "gap_days": 4, "pre_mean": 0.1566, "pre_n": 7, "post_windows": {"5": {"mean": -0.1679, "n": 1, "delta": -0.3245, "delta_pct": -207.2}, "7": {"mean": -0.0026, "n": 3, "delta": -0.1592, "delta_pct": -101.7}, "10": {"mean": -0.4637, "n": 6, "delta": -0.6203, "delta_pct": -396.1}, "14": {"mean": -0.2987, "n": 10, "delta": -0.4553, "delta_pct": -290.8}}, "post_by_day": [{"date": "2025-12-24", "day": 1, "das": null}, {"date": "2025-12-25", "day": 2, "das": null}, {"date": "2025-12-26", "day": 3, "das": null}, {"date": "2025-12-27", "day": 4, "das": null}, {"date": "2025-12-28", "day": 5, "das": -0.1679}, {"date": "2025-12-29", "day": 6, "das": 0.0142}, {"date": "2025-12-30", "day": 7, "das": 0.1458}, {"date": "2025-12-31", "day": 8, "das": -1.3827}, {"date": "2026-01-01", "day": 9, "das": -0.7083}, {"date": "2026-01-02", "day": 10, "das": -0.6835}, {"date": "2026-01-03", "day": 11, "das": 0.1134}, {"date": "2026-01-04", "day": 12, "das": 0.4167}, {"date": "2026-01-05", "day": 13, "das": -0.6828}, {"date": "2026-01-06", "day": 14, "das": -0.0523}, {"date": "2026-01-07", "day": 15, "das": -0.0372}, {"date": "2026-01-08", "day": 16, "das": -0.156}, {"date": "2026-01-09", "day": 17, "das": -0.0586}, {"date": "2026-01-10", "day": 18, "das": -0.2972}, {"date": "2026-01-11", "day": 19, "das": -0.3633}, {"date": "2026-01-12", "day": 20, "das": -0.6342}, {"date": "2026-01-13", "day": 21, "das": null}], "signal_changes": {"skin_temp_c": {"pre_mean": 34.06, "post_7d_mean": 33.6, "delta": -0.46, "pre_n": 7, "post_n": 3}, "resting_hr": {"pre_mean": 57.57, "post_7d_mean": 59.67, "delta": 2.1, "pre_n": 7, "post_n": 3}, "hrv_rmssd_ms": {"pre_mean": 31.42, "post_7d_mean": 30.22, "delta": -1.2, "pre_n": 7, "post_n": 3}, "recovery_score": {"pre_mean": 62.43, "post_7d_mean": 75.33, "delta": 12.9, "pre_n": 7, "post_n": 3}, "deep_sleep_min": {"pre_mean": 96.73, "post_7d_mean": 95.27, "delta": -1.46, "pre_n": 7, "post_n": 3}}, "actual_outcome": "IMPROVEMENT", "from_feeling": "Warm, overactivated", "to_feeling": "Warm, stable, great"}];
+const ACCURACY = {"1": {"correct": 2, "total": 3, "accuracy_pct": 67, "predictions": [{"transition": "P1(C)\u2192P2(A+)", "delta": -0.018, "predicted": "STABLE", "actual": "IMPROVEMENT", "correct": false}, {"transition": "P2(A+)\u2192P3(A+)", "delta": -0.045, "predicted": "STABLE", "actual": "STABLE", "correct": true}, {"transition": "P5(B+)\u2192P6(B-)", "delta": -0.378, "predicted": "DECLINE", "actual": "DECLINE", "correct": true}]}, "2": {"correct": 2, "total": 3, "accuracy_pct": 67, "predictions": [{"transition": "P1(C)\u2192P2(A+)", "delta": -0.317, "predicted": "DECLINE", "actual": "IMPROVEMENT", "correct": false}, {"transition": "P2(A+)\u2192P3(A+)", "delta": -0.013, "predicted": "STABLE", "actual": "STABLE", "correct": true}, {"transition": "P5(B+)\u2192P6(B-)", "delta": -0.221, "predicted": "DECLINE", "actual": "DECLINE", "correct": true}]}, "3": {"correct": 1, "total": 3, "accuracy_pct": 33, "predictions": [{"transition": "P1(C)\u2192P2(A+)", "delta": -0.245, "predicted": "DECLINE", "actual": "IMPROVEMENT", "correct": false}, {"transition": "P2(A+)\u2192P3(A+)", "delta": 0.042, "predicted": "STABLE", "actual": "STABLE", "correct": true}, {"transition": "P5(B+)\u2192P6(B-)", "delta": 0.151, "predicted": "IMPROVEMENT", "actual": "DECLINE", "correct": false}]}, "5": {"correct": 0, "total": 4, "accuracy_pct": 0, "predictions": [{"transition": "P1(C)\u2192P2(A+)", "delta": -0.186, "predicted": "DECLINE", "actual": "IMPROVEMENT", "correct": false}, {"transition": "P2(A+)\u2192P3(A+)", "delta": 0.131, "predicted": "IMPROVEMENT", "actual": "STABLE", "correct": false}, {"transition": "P5(B+)\u2192P6(B-)", "delta": 0.324, "predicted": "IMPROVEMENT", "actual": "DECLINE", "correct": false}, {"transition": "P6(B-)\u2192P7(A+)", "delta": -0.325, "predicted": "DECLINE", "actual": "IMPROVEMENT", "correct": false}]}, "7": {"correct": 0, "total": 4, "accuracy_pct": 0, "predictions": [{"transition": "P1(C)\u2192P2(A+)", "delta": 0.046, "predicted": "STABLE", "actual": "IMPROVEMENT", "correct": false}, {"transition": "P2(A+)\u2192P3(A+)", "delta": 0.131, "predicted": "IMPROVEMENT", "actual": "STABLE", "correct": false}, {"transition": "P5(B+)\u2192P6(B-)", "delta": 0.237, "predicted": "IMPROVEMENT", "actual": "DECLINE", "correct": false}, {"transition": "P6(B-)\u2192P7(A+)", "delta": -0.159, "predicted": "DECLINE", "actual": "IMPROVEMENT", "correct": false}]}, "10": {"correct": 1, "total": 4, "accuracy_pct": 25, "predictions": [{"transition": "P1(C)\u2192P2(A+)", "delta": 0.092, "predicted": "IMPROVEMENT", "actual": "IMPROVEMENT", "correct": true}, {"transition": "P2(A+)\u2192P3(A+)", "delta": -0.08, "predicted": "DECLINE", "actual": "STABLE", "correct": false}, {"transition": "P5(B+)\u2192P6(B-)", "delta": 0.186, "predicted": "IMPROVEMENT", "actual": "DECLINE", "correct": false}, {"transition": "P6(B-)\u2192P7(A+)", "delta": -0.62, "predicted": "DECLINE", "actual": "IMPROVEMENT", "correct": false}]}, "14": {"correct": 0, "total": 4, "accuracy_pct": 0, "predictions": [{"transition": "P1(C)\u2192P2(A+)", "delta": 0.035, "predicted": "STABLE", "actual": "IMPROVEMENT", "correct": false}, {"transition": "P2(A+)\u2192P3(A+)", "delta": -0.156, "predicted": "DECLINE", "actual": "STABLE", "correct": false}, {"transition": "P5(B+)\u2192P6(B-)", "delta": 0.186, "predicted": "IMPROVEMENT", "actual": "DECLINE", "correct": false}, {"transition": "P6(B-)\u2192P7(A+)", "delta": -0.455, "predicted": "DECLINE", "actual": "IMPROVEMENT", "correct": false}]}};
+const PROTO_DAS = {"P1": {"mean": -0.538, "n": 31, "std": 0.678}, "P2": {"mean": -0.204, "n": 44, "std": 0.433}, "P3": {"mean": -0.155, "n": 85, "std": 0.546}, "P4": {"mean": null, "n": 0, "std": null}, "P5": {"mean": -0.135, "n": 19, "std": 0.553}, "P6": {"mean": -0.016, "n": 10, "std": 0.447}, "P7": {"mean": -0.175, "n": 27, "std": 0.431}};
+const DAS_COMPONENTS = {"skin_temp_c": {"source": "recovery", "higher_is_better": true, "label": "Skin Temp", "unit": "\u00b0C"}, "resting_hr": {"source": "recovery", "higher_is_better": false, "label": "Resting HR", "unit": "bpm"}, "hrv_rmssd_ms": {"source": "recovery", "higher_is_better": true, "label": "HRV", "unit": "ms"}, "recovery_score": {"source": "cycles", "higher_is_better": true, "label": "Recovery", "unit": "/100"}, "deep_sleep_min": {"source": "cycles", "higher_is_better": true, "label": "Deep Sleep", "unit": "min"}};
+
+// ── Timeline Chart ──
+(function() {
+  const ctx = document.getElementById('timelineChart');
+
+  // Build protocol background annotations
+  const bgPlugin = {
+    id: 'protocolBg',
+    beforeDraw(chart) {
+      const {ctx: c, chartArea: area, scales: {x, y}} = chart;
+      if (!area) return;
+      PROTOS.forEach(p => {
+        const i1 = DATES.indexOf(p.start);
+        const i2 = DATES.indexOf(p.end);
+        if (i1 < 0 && i2 < 0) return;
+        const x1 = x.getPixelForValue(Math.max(0, i1));
+        const x2 = x.getPixelForValue(Math.min(DATES.length - 1, i2 >= 0 ? i2 : DATES.length - 1));
+        const color = PROTO_COLORS[p.id] || '#64748b';
+        c.fillStyle = color.replace(')', ',0.08)').replace('rgb', 'rgba');
+        c.fillRect(x1, area.top, x2 - x1, area.bottom - area.top);
+        // Label
+        c.fillStyle = color;
+        c.font = '10px system-ui';
+        c.textAlign = 'center';
+        c.fillText(p.id + ' ' + p.rating, (x1 + x2) / 2, area.top + 12);
+      });
+      // Transition vertical lines
+      TRANSITIONS.forEach(t => {
+        const idx = DATES.indexOf(t.change_date);
+        if (idx < 0) return;
+        const xp = x.getPixelForValue(idx);
+        c.strokeStyle = 'rgba(248,250,252,0.3)';
+        c.setLineDash([4, 4]);
+        c.beginPath(); c.moveTo(xp, area.top); c.lineTo(xp, area.bottom); c.stroke();
+        c.setLineDash([]);
+      });
+    }
+  };
+
+  new Chart(ctx, {
+    type: 'line',
+    plugins: [bgPlugin],
+    data: {
+      labels: DATES.map(d => d.slice(5)),  // MM-DD
+      datasets: [
+        {
+          label: 'Daily DAS',
+          data: RAW,
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(148,163,184,0.3)',
+          pointRadius: 2, pointHoverRadius: 4,
+          showLine: false, order: 2,
+        },
+        {
+          label: '3-day avg',
+          data: MA3,
+          borderColor: 'rgba(56,189,248,0.3)',
+          borderWidth: 1, pointRadius: 0, tension: 0.3, order: 1,
+        },
+        {
+          label: '7-day avg',
+          data: MA7,
+          borderColor: 'rgba(56,189,248,0.9)',
+          borderWidth: 2, pointRadius: 0, tension: 0.3, order: 0,
+        },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: {
+          ticks: { maxTicksLimit: 20, color: '#64748b', font: {size: 10} },
+          grid: { color: 'rgba(100,116,139,0.1)' },
+        },
+        y: {
+          title: { display: true, text: 'DAS (higher = better)', color: '#94a3b8', font: {size: 11} },
+          ticks: { color: '#64748b' },
+          grid: { color: 'rgba(100,116,139,0.15)' },
+        }
+      },
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: {size: 11} } },
+        tooltip: {
+          callbacks: {
+            title: ctx => DATES[ctx[0].dataIndex] || '',
+            label: ctx => {
+              const pid = PROTO_IDS[ctx.dataIndex];
+              return ctx.dataset.label + ': ' + (ctx.raw !== null ? ctx.raw.toFixed(3) : 'N/A')
+                + (pid ? ' [' + pid + ']' : '');
+            }
+          }
+        }
+      }
+    }
+  });
+})();
+
+// ── Protocol DAS Summary ──
+(function() {
+  const el = document.getElementById('protocolSummary');
+  let html = '<table><thead><tr><th>Protocol</th><th>Rating</th><th>Feeling</th><th>Mean DAS</th><th>Days</th><th>Interpretation</th></tr></thead><tbody>';
+  PROTOS.forEach(p => {
+    const stats = PROTO_DAS[p.id];
+    const dasVal = stats && stats.mean !== null ? stats.mean.toFixed(3) : '—';
+    const n = stats ? stats.n : 0;
+    let interp = '';
+    if (stats && stats.mean !== null) {
+      if (stats.mean > 0.15) interp = '<span class="delta-pos">Above personal baseline</span>';
+      else if (stats.mean < -0.15) interp = '<span class="delta-neg">Below personal baseline</span>';
+      else interp = '<span class="delta-flat">Near personal baseline</span>';
+    } else {
+      interp = '<span class="delta-flat">No data</span>';
+    }
+    const color = PROTO_COLORS[p.id] || '#64748b';
+    html += `<tr>
+      <td><span style="color:${color}; font-weight:700">${p.id}</span> ${p.label}</td>
+      <td><span class="badge" style="background:${color};color:#000">${p.rating}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${p.feeling}</td>
+      <td style="font-weight:600">${dasVal}</td>
+      <td>${n}</td>
+      <td>${interp}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+})();
+
+// ── Transition Cards ──
+(function() {
+  const el = document.getElementById('transitionCards');
+  let html = '';
+  TRANSITIONS.forEach(t => {
+    const fromColor = PROTO_COLORS[t.from_id] || '#64748b';
+    const toColor = PROTO_COLORS[t.to_id] || '#64748b';
+
+    // Find best window prediction
+    let pw7 = t.post_windows['7'] || t.post_windows['5'] || t.post_windows['3'];
+    let delta = pw7 ? pw7.delta : null;
+    let deltaClass = delta > 0.05 ? 'delta-pos' : delta < -0.05 ? 'delta-neg' : 'delta-flat';
+    let predicted = delta > 0.05 ? 'IMPROVEMENT' : delta < -0.05 ? 'DECLINE' : 'STABLE';
+    let matchStr = predicted === t.actual_outcome;
+
+    html += `<div class="t-card">
+      <div class="t-header">
+        <div>
+          <span class="badge" style="background:${fromColor};color:#000">${t.from_id} ${t.from_rating}</span>
+          <span class="arrow">→</span>
+          <span class="badge" style="background:${toColor};color:#000">${t.to_id} ${t.to_rating}</span>
+        </div>
+        <div class="${matchStr ? 'correct' : 'wrong'}" style="font-size:18px">${matchStr ? '✓' : '✗'}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
+        ${t.change_date} &middot; "${t.from_feeling}" → "${t.to_feeling}"
+      </div>
+      <table>
+        <tr><td>Pre-change DAS (${t.pre_n}d avg)</td><td style="font-weight:600">${t.pre_mean.toFixed(3)}</td></tr>`;
+
+    // Show each window
+    [3, 7, 14].forEach(w => {
+      const pw = t.post_windows[String(w)];
+      if (!pw) return;
+      const dc = pw.delta > 0.05 ? 'delta-pos' : pw.delta < -0.05 ? 'delta-neg' : 'delta-flat';
+      html += `<tr><td>Post ${w}d DAS (${pw.n}d avg)</td>
+        <td><span class="${dc}">${pw.mean.toFixed(3)} (${pw.delta > 0 ? '+' : ''}${pw.delta.toFixed(3)})</span></td></tr>`;
+    });
+
+    html += `<tr><td>Predicted</td><td class="${deltaClass}">${predicted}</td></tr>
+      <tr><td>Actual</td><td style="font-weight:600">${t.actual_outcome}</td></tr>
+      </table></div>`;
+  });
+  el.innerHTML = html;
+})();
+
+// ── Accuracy Table ──
+(function() {
+  const el = document.getElementById('accuracyTable');
+  let html = '<table><thead><tr><th>Window</th><th>Accuracy</th><th>Correct</th><th>Details</th></tr></thead><tbody>';
+  Object.entries(ACCURACY).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).forEach(([w, acc]) => {
+    const pct = acc.accuracy_pct;
+    const cls = pct >= 75 ? 'delta-pos' : pct >= 50 ? 'delta-flat' : 'delta-neg';
+    const details = acc.predictions.map(p =>
+      `${p.correct ? '✓' : '✗'} ${p.transition}: Δ=${p.delta > 0 ? '+' : ''}${p.delta.toFixed(3)}`
+    ).join(' &middot; ');
+    html += `<tr>
+      <td style="font-weight:600">${w} days</td>
+      <td class="${cls}" style="font-size:16px">${pct}%</td>
+      <td>${acc.correct}/${acc.total}</td>
+      <td style="font-size:11px;color:var(--text2)">${details}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  html += '<div class="explain" style="margin-top:12px">For each window size, we check: does the direction of DAS change (up/down) match the eventual subjective rating change? A higher accuracy at shorter windows means faster prediction.</div>';
+  el.innerHTML = html;
+})();
+
+// ── Signal Breakdown ──
+(function() {
+  const el = document.getElementById('signalBreakdown');
+  let html = '';
+  TRANSITIONS.forEach(t => {
+    html += `<div class="card"><h3>${t.from_id}(${t.from_rating}) → ${t.to_id}(${t.to_rating}) &mdash; ${t.change_date}</h3>`;
+    html += '<div class="signal-grid">';
+    Object.entries(DAS_COMPONENTS).forEach(([sig, cfg]) => {
+      const sc = t.signal_changes[sig];
+      if (!sc) { html += `<div class="signal-cell"><div class="val">—</div><div class="lbl">${cfg.label}</div></div>`; return; }
+      const delta = sc.delta;
+      const better = cfg.higher_is_better ? delta > 0 : delta < 0;
+      const cls = Math.abs(delta) < 0.5 ? 'delta-flat' : better ? 'delta-pos' : 'delta-neg';
+      const arrow = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+      html += `<div class="signal-cell">
+        <div class="val ${cls}">${sc.pre_mean} ${arrow} ${sc.post_7d_mean}</div>
+        <div class="lbl">${cfg.label} (${delta > 0 ? '+' : ''}${delta.toFixed(1)}${cfg.unit})</div>
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+})();
+
+// ── Decision Rule ──
+(function() {
+  const el = document.getElementById('decisionRule');
+  // Find the shortest window with >= 75% accuracy
+  let bestW = null;
+  for (const w of [1,2,3,5,7,10,14]) {
+    const a = ACCURACY[String(w)];
+    if (a && a.accuracy_pct >= 75) { bestW = w; break; }
+  }
+
+  let html = '';
+  if (bestW) {
+    html += `<h3 style="color:var(--green)">Proposed Rule: Monitor DAS for ${bestW} days after a dose change</h3>`;
+    html += `<div class="explain">
+      <strong>If DAS improves</strong> (delta &gt; +0.05) within ${bestW} days → the new dose is likely working. Continue monitoring.<br>
+      <strong>If DAS declines</strong> (delta &lt; -0.05) within ${bestW} days → the new dose may be wrong. Consider reverting or adjusting.<br>
+      <strong>If DAS is flat</strong> (|delta| &lt; 0.05) → insufficient signal. Continue monitoring for ${bestW * 2} days.
+    </div>`;
+    html += `<p>This rule correctly predicted ${ACCURACY[String(bestW)].correct}/${ACCURACY[String(bestW)].total} transitions in Ariel's data.</p>`;
+  } else {
+    html += '<h3 style="color:var(--yellow)">No reliable short-window predictor found</h3>';
+    html += '<p>The DAS did not consistently predict dose outcomes at any single time window. This may be due to:</p>';
+    html += '<ul style="font-size:13px;color:var(--text2);padding-left:20px">';
+    html += '<li>Too few transitions (n=' + TRANSITIONS.length + ') to establish a pattern</li>';
+    html += '<li>High day-to-day variability masking the signal</li>';
+    html += '<li>Non-linear dose-response relationships</li></ul>';
+  }
+
+  html += '<h3 style="margin-top:20px">Limitations</h3>';
+  html += '<ul style="font-size:13px;color:var(--text2);padding-left:20px">';
+  html += '<li>Based on n=' + TRANSITIONS.length + ' transitions from a single patient. Needs validation on more patients.</li>';
+  html += '<li>The F-rated STRUGGLING protocol had zero wearable data, so we cannot validate detection of the worst outcome.</li>';
+  html += '<li>Confounders (fertility meds, stress, seasonal changes) are not controlled for.</li>';
+  html += '<li>T4 changes take ~6 weeks for full effect; short windows primarily detect the T3 component response.</li>';
+  html += '</ul>';
+
+  html += '<h3 style="margin-top:20px">For Other Patients</h3>';
+  html += '<p>This framework is patient-agnostic. For any patient with a wearable:</p>';
+  html += '<ol style="font-size:13px;color:var(--text2);padding-left:20px">';
+  html += '<li>Collect ≥2 weeks of baseline wearable data on current dose</li>';
+  html += '<li>Change the dose</li>';
+  html += '<li>Compute their DAS daily (z-scored against their own baseline)</li>';
+  html += '<li>Apply the decision rule at the validated window</li></ol>';
+
+  el.innerHTML = html;
+})();
+</script>
+</body>
+</html>

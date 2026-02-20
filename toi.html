@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thyroid Optimization Index | T3 Dosing Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117; color: #c9d1d9; min-height: 100vh;
+        }
+        .password-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #0d1117; display: flex; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .password-box {
+            background: #161b22; padding: 40px; border-radius: 12px; border: 1px solid #30363d; text-align: center;
+        }
+        .password-box h2 { margin-bottom: 20px; color: #58a6ff; }
+        .password-box input {
+            padding: 12px 20px; font-size: 16px; border-radius: 6px;
+            border: 1px solid #30363d; background: #0d1117; color: #c9d1d9; margin-right: 10px;
+        }
+        .password-box button {
+            padding: 12px 24px; font-size: 16px; border-radius: 6px;
+            border: none; background: #238636; color: white; cursor: pointer;
+        }
+        .hidden { display: none !important; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        nav {
+            background: #161b22; padding: 15px 20px; margin-bottom: 20px;
+            border-radius: 8px; border: 1px solid #30363d;
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+        }
+        nav a {
+            color: #58a6ff; text-decoration: none; padding: 8px 16px;
+            border-radius: 6px; transition: background 0.2s; font-size: 14px;
+        }
+        nav a:hover { background: #21262d; }
+        nav a.active { background: #238636; color: white; }
+        header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 30px 20px; margin-bottom: 30px; border-radius: 12px;
+        }
+        header h1 { font-size: 28px; margin-bottom: 8px; }
+        header p { opacity: 0.9; font-size: 16px; }
+
+        .metrics-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px; margin-bottom: 30px;
+        }
+        .metric-card {
+            background: #161b22; padding: 24px; border-radius: 12px; border: 1px solid #30363d; text-align: center;
+        }
+        .metric-card .label { font-size: 13px; color: #8b949e; margin-bottom: 8px; }
+        .metric-card .value { font-size: 36px; font-weight: bold; }
+        .metric-card .subtext { font-size: 12px; color: #8b949e; margin-top: 4px; }
+        .green { color: #34d399; }
+        .yellow { color: #fbbf24; }
+        .red { color: #f87171; }
+
+        .zone-bar {
+            display: flex; height: 30px; border-radius: 6px; overflow: hidden; margin-bottom: 10px;
+        }
+        .zone-segment {
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 600; color: white;
+        }
+
+        .chart-card {
+            background: #161b22; padding: 20px; border-radius: 12px;
+            border: 1px solid #30363d; margin-bottom: 20px;
+        }
+        .chart-card h3 { font-size: 16px; margin-bottom: 15px; color: #c9d1d9; }
+        .chart-container { position: relative; height: 300px; }
+        .chart-container.tall { height: 400px; }
+
+        .protocol-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px; margin-bottom: 30px;
+        }
+        .protocol-card {
+            background: #161b22; padding: 20px; border-radius: 12px;
+            border: 2px solid #30363d; position: relative;
+        }
+        .protocol-card.best { border-color: #34d399; }
+        .protocol-card.worst { border-color: #f87171; }
+        .protocol-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+        }
+        .protocol-name { font-size: 15px; font-weight: 600; }
+        .protocol-badge {
+            padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+        }
+        .badge-best { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+        .badge-worst { background: rgba(248, 113, 113, 0.2); color: #f87171; }
+        .toi-display {
+            text-align: center; margin-bottom: 15px;
+        }
+        .toi-value {
+            font-size: 42px; font-weight: bold;
+        }
+        .toi-label { font-size: 12px; color: #8b949e; }
+        .zone-breakdown {
+            display: flex; justify-content: space-around; text-align: center;
+        }
+        .zone-stat { flex: 1; }
+        .zone-pct { font-size: 18px; font-weight: 600; }
+        .zone-label { font-size: 11px; color: #8b949e; }
+
+        .insight-box {
+            background: #161b22; padding: 20px; border-radius: 12px;
+            border-left: 4px solid #10b981; margin-bottom: 20px;
+        }
+        .insight-box h4 { color: #10b981; margin-bottom: 10px; }
+        .insight-box p { color: #8b949e; line-height: 1.6; }
+        .insight-box ul { margin-top: 10px; padding-left: 20px; }
+        .insight-box li { margin-bottom: 8px; color: #c9d1d9; }
+
+        .section-title {
+            font-size: 20px; color: #58a6ff; margin-bottom: 20px;
+            padding-bottom: 10px; border-bottom: 1px solid #30363d;
+        }
+    </style>
+</head>
+<body>
+    <div class="password-overlay" id="passwordOverlay">
+        <div class="password-box">
+            <h2>T3 Dosing Dashboard</h2>
+            <p style="margin-bottom: 20px; color: #8b949e;">Enter password to view</p>
+            <input type="password" id="passwordInput" placeholder="Password" onkeypress="if(event.key==='Enter')checkPassword()">
+            <button onclick="checkPassword()">View</button>
+        </div>
+    </div>
+
+    <div class="container hidden" id="dashboard">
+        <nav>
+            <a href="index.html">Journal</a>
+            <a href="stability.html">Stability</a>
+            <a href="nightsignal.html">NightSignal</a>
+            <a href="acute-response.html">Acute</a>
+            <a href="acute-analysis.html">Acute Analysis</a>
+            <a href="report-card.html">Report Card</a>
+            <a href="transition.html">Transitions</a>
+            <a href="data-explorer.html">Explorer</a>
+            <a href="pharmacogenomics.html">PGx</a>
+            <a href="thyroid-pgx.html">Thyroid</a>
+            <a href="phenotypes.html">Phenotypes</a>
+            <a href="toi.html" class="active">TOI</a>
+            <a href="causal.html">Causal</a>
+            <a href="pk-model.html">PK Model</a>
+            <a href="forecast.html">Forecast</a>
+            <a href="exploratory-predictive.html">Predictive</a>
+            <a href="recovery-intelligence.html">Recovery</a>
+        </nav>
+
+        <header>
+            <h1>Thyroid Optimization Index (TOI)</h1>
+            <p>Single composite score integrating wearables + symptoms + menstrual phase | Green ≥70 | Yellow 50-70 | Red &lt;50</p>
+        </header>
+
+        <div class="insight-box">
+            <h4>Key Finding</h4>
+            <p>T4-only protocol (100mcg T4, 0mcg T3) has <strong style="color: #f87171;">0% green zone days</strong> and 61% red zone days.
+            Adding T3 improves TOI by up to <strong style="color: #34d399;">10 points</strong>.</p>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="label">Average TOI</div>
+                <div class="value yellow">54.8</div>
+                <div class="subtext">± 12.6 std dev</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">Green Zone Days</div>
+                <div class="value green">12%</div>
+                <div class="subtext">58 of 502 days</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">Yellow Zone Days</div>
+                <div class="value yellow">54%</div>
+                <div class="subtext">272 of 502 days</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">Red Zone Days</div>
+                <div class="value red">34%</div>
+                <div class="subtext">172 of 502 days</div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Overall Zone Distribution</h3>
+            <div class="zone-bar">
+                <div class="zone-segment" style="flex: 12; background: #34d399;">12% Green</div>
+                <div class="zone-segment" style="flex: 54; background: #fbbf24;">54% Yellow</div>
+                <div class="zone-segment" style="flex: 34; background: #f87171;">34% Red</div>
+            </div>
+            <p style="font-size: 13px; color: #8b949e; text-align: center;">Goal: Maximize green zone days (TOI ≥ 70)</p>
+        </div>
+
+        <h2 class="section-title">TOI by Protocol</h2>
+        <div class="protocol-grid" id="protocolGrid"></div>
+
+        <div class="chart-card">
+            <h3>TOI Timeline (Monthly Averages)</h3>
+            <div class="chart-container tall">
+                <canvas id="toiTimeline"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Protocol Comparison</h3>
+            <div class="chart-container">
+                <canvas id="protocolChart"></canvas>
+            </div>
+        </div>
+
+        <div class="insight-box">
+            <h4>Clinical Recommendations</h4>
+            <ul>
+                <li><strong>Avoid T4-only:</strong> Definitively worst protocol with 0% green zone days</li>
+                <li><strong>Best performer:</strong> T4=88, T3=7.5 (TOI 53.8) but small sample size (9 days)</li>
+                <li><strong>Most consistent:</strong> T4=82, T3=6.25 with lowest variance</li>
+                <li><strong>Improvement potential:</strong> 10.1 TOI points by switching from T4-only to T3 combination</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function checkPassword() {
+            const pwd = document.getElementById('passwordInput').value;
+            if (pwd === 'ari2024' || pwd === 'thyroid') {
+                document.getElementById('passwordOverlay').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                initDashboard();
+            } else { alert('Incorrect password'); }
+        }
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            document.getElementById('passwordOverlay').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.addEventListener('DOMContentLoaded', initDashboard);
+        }
+
+        const protocolStats = {
+            'T4=100, T3=0': { toi: 43.7, std: 12.3, green: 0, yellow: 39, red: 61, n: 31 },
+            'T4=88, T3=5': { toi: 49.5, std: 12.2, green: 5, yellow: 46, red: 49, n: 61 },
+            'T4=75, T3=10': { toi: 49.9, std: 12.6, green: 6, yellow: 41, red: 53, n: 81 },
+            'T4=88, T3=7.5': { toi: 53.8, std: 11.3, green: 11, yellow: 56, red: 33, n: 9 },
+            'T4=82, T3=6.25': { toi: 52.4, std: 10.0, green: 4, yellow: 59, red: 37, n: 27 }
+        };
+
+        const monthlyTOI = [
+            { month: '2023-03', toi: 62.2 }, { month: '2023-04', toi: 64.1 }, { month: '2023-05', toi: 58.7 },
+            { month: '2023-06', toi: 58.8 }, { month: '2023-07', toi: 59.3 }, { month: '2023-08', toi: 60.6 },
+            { month: '2023-09', toi: 56.2 }, { month: '2023-10', toi: 57.2 }, { month: '2024-02', toi: 53.6 },
+            { month: '2024-06', toi: 62.0 }, { month: '2024-07', toi: 51.9 }, { month: '2024-08', toi: 56.7 },
+            { month: '2024-09', toi: 58.5 }, { month: '2024-10', toi: 64.5 }, { month: '2024-11', toi: 40.0 },
+            { month: '2025-01', toi: 47.0 }, { month: '2025-02', toi: 52.9 }, { month: '2025-03', toi: 47.2 },
+            { month: '2025-05', toi: 56.6 }, { month: '2025-06', toi: 52.2 }, { month: '2025-07', toi: 42.3 },
+            { month: '2025-08', toi: 54.3 }, { month: '2025-11', toi: 52.6 }, { month: '2025-12', toi: 50.1 },
+            { month: '2026-01', toi: 51.9 }
+        ];
+
+        function initDashboard() {
+            renderProtocolCards();
+            renderTOITimeline();
+            renderProtocolChart();
+        }
+
+        function renderProtocolCards() {
+            const grid = document.getElementById('protocolGrid');
+            const sorted = Object.entries(protocolStats).sort((a, b) => b[1].toi - a[1].toi);
+            const best = sorted[0][0];
+            const worst = sorted[sorted.length - 1][0];
+
+            grid.innerHTML = sorted.map(([name, stats]) => {
+                const isBest = name === best;
+                const isWorst = name === worst;
+                const toiColor = stats.toi >= 70 ? 'green' : stats.toi >= 50 ? 'yellow' : 'red';
+
+                return `
+                    <div class="protocol-card ${isBest ? 'best' : ''} ${isWorst ? 'worst' : ''}">
+                        <div class="protocol-header">
+                            <span class="protocol-name">${name}</span>
+                            ${isBest ? '<span class="protocol-badge badge-best">BEST</span>' : ''}
+                            ${isWorst ? '<span class="protocol-badge badge-worst">WORST</span>' : ''}
+                        </div>
+                        <div class="toi-display">
+                            <div class="toi-value ${toiColor}">${stats.toi.toFixed(1)}</div>
+                            <div class="toi-label">Mean TOI (n=${stats.n})</div>
+                        </div>
+                        <div class="zone-bar" style="height: 20px; margin-bottom: 10px;">
+                            <div class="zone-segment" style="flex: ${stats.green}; background: #34d399;"></div>
+                            <div class="zone-segment" style="flex: ${stats.yellow}; background: #fbbf24;"></div>
+                            <div class="zone-segment" style="flex: ${stats.red}; background: #f87171;"></div>
+                        </div>
+                        <div class="zone-breakdown">
+                            <div class="zone-stat"><div class="zone-pct green">${stats.green}%</div><div class="zone-label">Green</div></div>
+                            <div class="zone-stat"><div class="zone-pct yellow">${stats.yellow}%</div><div class="zone-label">Yellow</div></div>
+                            <div class="zone-stat"><div class="zone-pct red">${stats.red}%</div><div class="zone-label">Red</div></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTOITimeline() {
+            const ctx = document.getElementById('toiTimeline').getContext('2d');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: monthlyTOI.map(d => d.month),
+                    datasets: [{
+                        label: 'Monthly TOI',
+                        data: monthlyTOI.map(d => d.toi),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                greenLine: { type: 'line', yMin: 70, yMax: 70, borderColor: '#34d399', borderWidth: 2, borderDash: [5, 5] },
+                                yellowLine: { type: 'line', yMin: 50, yMax: 50, borderColor: '#fbbf24', borderWidth: 2, borderDash: [5, 5] }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', maxRotation: 45 }},
+                        y: { min: 30, max: 80, grid: { color: '#21262d' }, ticks: { color: '#8b949e' }}
+                    }
+                }
+            });
+        }
+
+        function renderProtocolChart() {
+            const ctx = document.getElementById('protocolChart').getContext('2d');
+            const labels = Object.keys(protocolStats);
+            const data = labels.map(l => protocolStats[l].toi);
+            const colors = data.map(v => v >= 70 ? '#34d399' : v >= 50 ? '#fbbf24' : '#f87171');
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Mean TOI',
+                        data,
+                        backgroundColor: colors,
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }},
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#8b949e' }},
+                        y: { min: 0, max: 70, grid: { color: '#21262d' }, ticks: { color: '#8b949e' }}
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

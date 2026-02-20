@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exploratory Predictive Analysis - Ariel</title>
+<style>
+  :root { --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+    --text: #f1f5f9; --text2: #94a3b8; --accent: #38bdf8;
+    --green: #22c55e; --yellow: #eab308; --red: #ef4444; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background:var(--bg); color:var(--text); padding:32px; line-height:1.6;
+    max-width:1100px; margin:0 auto; }
+  h1 { font-size:24px; font-weight:700; margin-bottom:4px; }
+  h2 { font-size:18px; font-weight:600; margin:36px 0 12px; color:var(--accent);
+    border-bottom:1px solid var(--surface2); padding-bottom:8px; }
+  h3 { font-size:15px; font-weight:600; margin:16px 0 6px; }
+  p { margin:8px 0; font-size:14px; color:var(--text2); }
+  .subtitle { color:var(--text2); font-size:13px; margin-bottom:28px; }
+  .card { background:var(--surface); border-radius:10px; padding:20px;
+    margin-bottom:16px; border:1px solid var(--surface2); }
+  .verdict { padding:12px 16px; border-radius:8px; margin:12px 0; font-weight:600; font-size:14px; }
+  .verdict.pass { background:rgba(34,197,94,0.12); border-left:4px solid var(--green); color:var(--green); }
+  .verdict.fail { background:rgba(239,68,68,0.12); border-left:4px solid var(--red); color:var(--red); }
+  .verdict.mixed { background:rgba(234,179,8,0.12); border-left:4px solid var(--yellow); color:var(--yellow); }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin:8px 0; }
+  th, td { padding:6px 10px; text-align:left; border-bottom:1px solid var(--surface2); }
+  th { font-weight:600; color:var(--text2); font-size:12px; text-transform:uppercase; }
+  .heatmap-grid { display:grid; gap:2px; margin:8px 0; }
+  .heatmap-cell { padding:4px; text-align:center; font-size:11px; border-radius:3px; font-weight:600; }
+  .summary-grid { display:grid; grid-template-columns: repeat(6, 1fr); gap:12px; margin:16px 0; }
+  .summary-card { background:var(--bg); padding:12px; border-radius:8px; text-align:center; }
+  .summary-card .num { font-size:24px; font-weight:700; }
+  .summary-card .lbl { font-size:11px; color:var(--text2); margin-top:4px; }
+  footer { margin-top:40px; padding-top:16px; border-top:1px solid var(--surface2);
+    color:var(--text2); font-size:11px; }
+  nav.sticky { position:sticky; top:0; z-index:100; background:var(--surface);
+    border-bottom:1px solid var(--surface2); padding:8px 0; margin:-32px -32px 24px;
+    padding:10px 32px; backdrop-filter:blur(12px); background:rgba(30,41,59,0.92); }
+  nav.sticky a { color:var(--text2); text-decoration:none; font-size:12px; font-weight:600;
+    padding:4px 10px; border-radius:6px; transition:all .15s; white-space:nowrap; }
+  nav.sticky a:hover, nav.sticky a.active { color:var(--accent); background:var(--surface2); }
+  nav.sticky .nav-inner { display:flex; gap:2px; align-items:center; overflow-x:auto; }
+  nav.sticky .nav-title { font-weight:700; color:var(--text); font-size:13px; margin-right:8px;
+    flex-shrink:0; }
+  .scroll-mt { scroll-margin-top:52px; }
+</style>
+</head>
+<body>
+
+<nav style="display:flex;gap:4px;padding:10px 16px;background:#1e293b;border-radius:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;font-size:13px;">
+  <a href="index.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">Journal</a>
+  <a href="stability.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">Stability</a>
+  <a href="nightsignal.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">NightSignal</a>
+  <a href="acute-response.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">Acute</a>
+  <a href="report-card.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">Report Card</a>
+  <a href="transition.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">Transitions</a>
+  <a href="data-explorer.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">Explorer</a>
+  <a href="pharmacogenomics.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">PGx</a>
+  <a href="forecast.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">Forecast</a>
+  <a href="exploratory-predictive.html" style="color:#38bdf8;text-decoration:none;padding:4px 10px;border-radius:6px;background:#334155;">Predictive</a>
+  <a href="recovery-intelligence.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;">Recovery</a>
+</nav>
+
+<nav class="sticky">
+<div class="nav-inner">
+  <span class="nav-title">Predictive Analysis</span>
+  <a href="#summary">Summary</a>
+  <a href="#q1">Q1 Concordance</a>
+  <a href="#q2">Q2 Discrimination</a>
+  <a href="#q3">Q3 Circadian</a>
+  <a href="#q4">Q4 Phase</a>
+  <a href="#q5">Q5 Transitions</a>
+  <a href="#aci">ACI Algorithm</a>
+  <a href="#viability">Viability</a>
+</div>
+</nav>
+
+<h1>Exploratory Predictive Analysis</h1>
+<div class="subtitle">
+  Ariel &middot; 5 hypotheses + ACI algorithm &middot; Generated 2026-02-19 15:01
+</div>
+
+<!-- ═══ EXECUTIVE SUMMARY ═══ -->
+<h2 id="summary" class="scroll-mt">Executive Summary</h2>
+<div class="summary-grid">
+  <div class="summary-card">
+    <div class="num" style="color:var(--green)">Q1</div>
+    <div class="lbl">Concordance<br>SIGNAL</div>
+  </div>
+  <div class="summary-card">
+    <div class="num" style="color:var(--green)">Q2</div>
+    <div class="lbl">Discrimination<br>SIGNAL</div>
+  </div>
+  <div class="summary-card">
+    <div class="num" style="color:var(--red)">Q3</div>
+    <div class="lbl">Circadian<br>WEAK</div>
+  </div>
+  <div class="summary-card">
+    <div class="num" style="color:var(--green)">Q4</div>
+    <div class="lbl">Phase Confound<br>MINIMAL</div>
+  </div>
+  <div class="summary-card">
+    <div class="num" style="color:var(--green)">Q5</div>
+    <div class="lbl">Change-points<br>DETECTABLE</div>
+  </div>
+  <div class="summary-card" style="border:1px solid var(--accent)">
+    <div class="num" style="color:var(--green)">ACI</div>
+    <div class="lbl">Concordance Index<br>VALIDATED</div>
+  </div>
+</div>
+
+<!-- ═══ Q1: CONCORDANCE ═══ -->
+<h2 id="q1" class="scroll-mt">Q1: Signal Concordance Across Protocols</h2>
+<div class="card">
+<p>Do the correlations between wearable signals differ when the dose is optimal vs. not? If A+ protocols
+have a distinct inter-signal correlation fingerprint, this would enable a concordance-based predictor
+that solves the inverted-U problem.</p>
+
+<div class="verdict pass">
+CONCORDANCE SIGNAL DETECTED: A+ protocols are closer to the template (separation=0.854)
+</div>
+
+<h3>Frobenius Distance from A+ Template</h3>
+<table>
+<thead><tr><th>Protocol</th><th>Rating</th><th>Distance from A+ Template</th><th>Days</th></tr></thead>
+<tbody>
+<tr>
+  <td><span style="color:#fb923c;font-weight:700">P1</span> T4=100 / T3=0</td>
+  <td><span style="color:#fb923c">C</span></td>
+  <td style="font-weight:600">0.959</td>
+  <td>36</td>
+</tr>
+<tr>
+  <td><span style="color:#22c55e;font-weight:700">P2</span> T4=88 / T3=5</td>
+  <td><span style="color:#22c55e">A+</span></td>
+  <td style="font-weight:600">0.269</td>
+  <td>47</td>
+</tr>
+<tr>
+  <td><span style="color:#22c55e;font-weight:700">P3</span> T4=75 / T3=10</td>
+  <td><span style="color:#22c55e">A+</span></td>
+  <td style="font-weight:600">0.541</td>
+  <td>98</td>
+</tr>
+<tr>
+  <td><span style="color:#60a5fa;font-weight:700">P5</span> T4=88 / T3=5 (2nd)</td>
+  <td><span style="color:#60a5fa">B+</span></td>
+  <td style="font-weight:600">1.151</td>
+  <td>19</td>
+</tr>
+<tr>
+  <td><span style="color:#fbbf24;font-weight:700">P6</span> T4=88 / T3=7.5</td>
+  <td><span style="color:#fbbf24">B-</span></td>
+  <td style="font-weight:600">1.798</td>
+  <td>11</td>
+</tr>
+<tr>
+  <td><span style="color:#22c55e;font-weight:700">P7</span> T4=82 / T3=6.25</td>
+  <td><span style="color:#22c55e">A+</span></td>
+  <td style="font-weight:600">0.536</td>
+  <td>31</td>
+</tr>
+</tbody></table>
+
+<h3>A+ Template Correlation Matrix</h3>
+<table style="font-size:12px">
+<thead><tr><th></th><th>RHR</th><th>HRV</th><th>Recovery</th><th>Deep Sleep</th><th>Skin Temp</th></tr></thead><tbody><tr><td style='font-weight:600'>RHR</td><td style='text-align:center;background:rgba(56,189,248,0.15);font-weight:600'>+1.000</td><td style='text-align:center;background:rgba(239,68,68,0.31560000000000005);font-weight:600'>-0.789</td><td style='text-align:center;background:rgba(239,68,68,0.2596);font-weight:600'>-0.649</td><td style='text-align:center;background:rgba(239,68,68,0.024800000000000003);font-weight:600'>-0.062</td><td style='text-align:center;background:rgba(34,197,94,0.11120000000000002);font-weight:600'>+0.278</td></tr><tr><td style='font-weight:600'>HRV</td><td style='text-align:center;background:rgba(239,68,68,0.31560000000000005);font-weight:600'>-0.789</td><td style='text-align:center;background:rgba(56,189,248,0.15);font-weight:600'>+1.000</td><td style='text-align:center;background:rgba(34,197,94,0.30720000000000003);font-weight:600'>+0.768</td><td style='text-align:center;background:rgba(34,197,94,0.008400000000000001);font-weight:600'>+0.021</td><td style='text-align:center;background:rgba(239,68,68,0.0956);font-weight:600'>-0.239</td></tr><tr><td style='font-weight:600'>Recovery</td><td style='text-align:center;background:rgba(239,68,68,0.2596);font-weight:600'>-0.649</td><td style='text-align:center;background:rgba(34,197,94,0.30720000000000003);font-weight:600'>+0.768</td><td style='text-align:center;background:rgba(56,189,248,0.15);font-weight:600'>+1.000</td><td style='text-align:center;background:rgba(34,197,94,0.0692);font-weight:600'>+0.173</td><td style='text-align:center;background:rgba(239,68,68,0.066);font-weight:600'>-0.165</td></tr><tr><td style='font-weight:600'>Deep Sleep</td><td style='text-align:center;background:rgba(239,68,68,0.024800000000000003);font-weight:600'>-0.062</td><td style='text-align:center;background:rgba(34,197,94,0.008400000000000001);font-weight:600'>+0.021</td><td style='text-align:center;background:rgba(34,197,94,0.0692);font-weight:600'>+0.173</td><td style='text-align:center;background:rgba(56,189,248,0.15);font-weight:600'>+1.000</td><td style='text-align:center;background:rgba(239,68,68,0.0492);font-weight:600'>-0.123</td></tr><tr><td style='font-weight:600'>Skin Temp</td><td style='text-align:center;background:rgba(34,197,94,0.11120000000000002);font-weight:600'>+0.278</td><td style='text-align:center;background:rgba(239,68,68,0.0956);font-weight:600'>-0.239</td><td style='text-align:center;background:rgba(239,68,68,0.066);font-weight:600'>-0.165</td><td style='text-align:center;background:rgba(239,68,68,0.0492);font-weight:600'>-0.123</td><td style='text-align:center;background:rgba(56,189,248,0.15);font-weight:600'>+1.000</td></tr></tbody></table></div>
+<h2 id="q2" class="scroll-mt">Q2: Individual Signal Discrimination (A+ vs non-A+ Days)</h2>
+<div class="card">
+<p>Which individual signals best separate A+ protocol days from non-A+ days?
+ROC-AUC > 0.65 indicates a useful signal; > 0.75 is strong.</p>
+<div class="verdict pass">
+DISCRIMINATIVE SIGNALS FOUND
+</div><table>
+<thead><tr><th>Signal</th><th>AUC</th><th>Direction</th><th>A+ Mean</th><th>Other Mean</th><th>N</th></tr></thead>
+<tbody><tr>
+  <td>rem_sleep_min</td>
+  <td style="font-weight:600;color:var(--green)">0.683
+    <div style="background:var(--green);height:3px;width:36.60000000000001px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>higher in A+</td>
+  <td>99.54</td>
+  <td>73.86</td>
+  <td>206</td>
+</tr><tr>
+  <td>skin_temp_c</td>
+  <td style="font-weight:600;color:var(--yellow)">0.628
+    <div style="background:var(--yellow);height:3px;width:25.6px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>lower in A+</td>
+  <td>33.41</td>
+  <td>33.81</td>
+  <td>216</td>
+</tr><tr>
+  <td>sleep_efficiency</td>
+  <td style="font-weight:600;color:var(--yellow)">0.626
+    <div style="background:var(--yellow);height:3px;width:25.2px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>higher in A+</td>
+  <td>0.95</td>
+  <td>0.94</td>
+  <td>206</td>
+</tr><tr>
+  <td>hrv_rmssd_ms</td>
+  <td style="font-weight:600;color:var(--yellow)">0.624
+    <div style="background:var(--yellow);height:3px;width:24.8px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>higher in A+</td>
+  <td>31.67</td>
+  <td>28.75</td>
+  <td>216</td>
+</tr><tr>
+  <td>recovery_score</td>
+  <td style="font-weight:600;color:var(--yellow)">0.617
+    <div style="background:var(--yellow);height:3px;width:23.4px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>higher in A+</td>
+  <td>60.47</td>
+  <td>51.79</td>
+  <td>208</td>
+</tr><tr>
+  <td>spo2_pct</td>
+  <td style="font-weight:600;color:var(--yellow)">0.604
+    <div style="background:var(--yellow);height:3px;width:20.799999999999997px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>lower in A+</td>
+  <td>96.68</td>
+  <td>97.12</td>
+  <td>214</td>
+</tr><tr>
+  <td>resting_hr</td>
+  <td style="font-weight:600;color:var(--yellow)">0.602
+    <div style="background:var(--yellow);height:3px;width:20.399999999999995px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>lower in A+</td>
+  <td>59.54</td>
+  <td>61.25</td>
+  <td>216</td>
+</tr><tr>
+  <td>sleep_hours</td>
+  <td style="font-weight:600;color:var(--yellow)">0.566
+    <div style="background:var(--yellow);height:3px;width:13.199999999999989px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>higher in A+</td>
+  <td>7.42</td>
+  <td>6.97</td>
+  <td>206</td>
+</tr><tr>
+  <td>deep_sleep_min</td>
+  <td style="font-weight:600;color:var(--text2)">0.529
+    <div style="background:var(--text2);height:3px;width:5.800000000000005px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>higher in A+</td>
+  <td>93.24</td>
+  <td>90.89</td>
+  <td>206</td>
+</tr><tr>
+  <td>strain_score</td>
+  <td style="font-weight:600;color:var(--text2)">0.501
+    <div style="background:var(--text2);height:3px;width:0.20000000000000018px;border-radius:2px;margin-top:2px"></div>
+  </td>
+  <td>higher in A+</td>
+  <td>6.78</td>
+  <td>6.82</td>
+  <td>242</td>
+</tr></tbody></table></div>
+<h2 id="q3" class="scroll-mt">Q3: Circadian / Within-Day HR Patterns</h2>
+<div class="card">
+<p>Thyroid hormone is a master regulator of circadian rhythm. Do protocols with optimal dosing
+show different within-day HR patterns (cosinor amplitude, nocturnal dip)?</p>
+<div class="verdict mixed">
+Circadian metrics show limited differentiation (amplitude diff = 0.1 bpm)
+</div><table>
+<thead><tr><th>Protocol</th><th>Rating</th><th>Days</th><th>Cosinor Amplitude (bpm)</th><th>Nocturnal Dip Ratio</th><th>Diurnal Range (bpm)</th><th>Cosinor R&sup2;</th></tr></thead>
+<tbody><tr>
+  <td><span style="color:#fb923c;font-weight:700">P1</span></td>
+  <td style="color:#fb923c">C</td>
+  <td>30</td>
+  <td style="font-weight:600">11.9 +/- 5.7</td>
+  <td>0.1042</td>
+  <td>8.1</td>
+  <td>0.561</td>
+</tr><tr>
+  <td><span style="color:#22c55e;font-weight:700">P2</span></td>
+  <td style="color:#22c55e">A+</td>
+  <td>43</td>
+  <td style="font-weight:600">10.0 +/- 3.5</td>
+  <td>0.0891</td>
+  <td>6.6</td>
+  <td>0.501</td>
+</tr><tr>
+  <td><span style="color:#22c55e;font-weight:700">P3</span></td>
+  <td style="color:#22c55e">A+</td>
+  <td>87</td>
+  <td style="font-weight:600">11.4 +/- 4.0</td>
+  <td>0.1042</td>
+  <td>7.8</td>
+  <td>0.564</td>
+</tr><tr>
+  <td><span style="color:#60a5fa;font-weight:700">P5</span></td>
+  <td style="color:#60a5fa">B+</td>
+  <td>19</td>
+  <td style="font-weight:600">9.4 +/- 4.1</td>
+  <td>0.0854</td>
+  <td>6.2</td>
+  <td>0.511</td>
+</tr><tr>
+  <td><span style="color:#fbbf24;font-weight:700">P6</span></td>
+  <td style="color:#fbbf24">B-</td>
+  <td>11</td>
+  <td style="font-weight:600">10.1 +/- 3.8</td>
+  <td>0.0430</td>
+  <td>3.5</td>
+  <td>0.515</td>
+</tr><tr>
+  <td><span style="color:#22c55e;font-weight:700">P7</span></td>
+  <td style="color:#22c55e">A+</td>
+  <td>29</td>
+  <td style="font-weight:600">9.8 +/- 4.6</td>
+  <td>0.0981</td>
+  <td>7.3</td>
+  <td>0.479</td>
+</tr></tbody></table></div>
+<h2 id="q4" class="scroll-mt">Q4: Menstrual Phase Confounding</h2>
+<div class="card">
+<p>Different protocols were tested during different menstrual phase distributions.
+Does this bias the comparison? Are phase-adjusted rankings different?</p>
+<div class="verdict pass">
+Phase adjustment does NOT change rankings -- menstrual phase is a minor confounder
+</div><h3>Phase Distribution by Protocol</h3>
+<table>
+<thead><tr><th>Protocol</th><th>Total Days</th><th>Menstrual %</th><th>Follicular %</th><th>Ovulatory %</th><th>Luteal %</th></tr></thead>
+<tbody><tr>
+  <td><span style="color:#22c55e;font-weight:700">P3</span></td>
+  <td>86</td>
+  <td>10.5%</td>
+  <td>41.9%</td>
+  <td>7.0%</td>
+  <td>40.7%</td>
+</tr><tr>
+  <td><span style="color:#60a5fa;font-weight:700">P5</span></td>
+  <td>19</td>
+  <td>21.1%</td>
+  <td>36.8%</td>
+  <td>10.5%</td>
+  <td>31.6%</td>
+</tr><tr>
+  <td><span style="color:#fbbf24;font-weight:700">P6</span></td>
+  <td>11</td>
+  <td>36.4%</td>
+  <td>36.4%</td>
+  <td>0.0%</td>
+  <td>27.3%</td>
+</tr><tr>
+  <td><span style="color:#22c55e;font-weight:700">P7</span></td>
+  <td>31</td>
+  <td>19.4%</td>
+  <td>32.3%</td>
+  <td>6.5%</td>
+  <td>41.9%</td>
+</tr></tbody></table><h3>RHR Rankings: Unadjusted vs Phase-Adjusted</h3><table><thead><tr><th>Rank</th><th>Unadjusted</th><th>Phase-Adjusted</th></tr></thead><tbody><tr><td>1</td><td>P6 (58.5)</td><td>P6 (58.6)</td></tr><tr><td>2</td><td>P3 (59.1)</td><td>P3 (58.9)</td></tr><tr><td>3</td><td>P5 (59.7)</td><td>P5 (59.5)</td></tr><tr><td>4</td><td>P7 (59.9)</td><td>P7 (61.0)</td></tr></tbody></table></div>
+<h2 id="q5" class="scroll-mt">Q5: Change-Point Detection at Dose Transitions</h2>
+<div class="card">
+<p>Can we detect when a dose change takes physiological effect using CUSUM and rolling z-scores?
+If detection lags are consistent and short (&lt;14 days), real-time monitoring is viable.</p>
+<div class="verdict pass">
+CHANGE-POINTS DETECTABLE: average first detection at 5.3 days
+</div><table>
+<thead><tr><th>Transition</th><th>Signal</th><th>Pre Mean</th><th>Post Mean</th><th>Delta (z-score)</th><th>First Detected (day)</th></tr></thead>
+<tbody><tr>
+  <td><b>P1(C) -> P2(A+)</b></td>
+  <td>Deep Sleep</td>
+  <td>92.7</td>
+  <td>92.8</td>
+  <td style="color:var(--text2);font-weight:600">+0.00</td>
+  <td style="color:var(--green);font-weight:600">Day 10</td>
+</tr><tr>
+  <td></td>
+  <td>HRV</td>
+  <td>34.1</td>
+  <td>32.1</td>
+  <td style="color:var(--text2);font-weight:600">-0.28</td>
+  <td style="color:var(--text2);font-weight:600">--</td>
+</tr><tr>
+  <td></td>
+  <td>Recovery</td>
+  <td>56.4</td>
+  <td>55.6</td>
+  <td style="color:var(--text2);font-weight:600">-0.04</td>
+  <td style="color:var(--text2);font-weight:600">--</td>
+</tr><tr>
+  <td></td>
+  <td>RHR</td>
+  <td>58.7</td>
+  <td>59.7</td>
+  <td style="color:var(--text2);font-weight:600">+0.43</td>
+  <td style="color:var(--green);font-weight:600">Day 3</td>
+</tr><tr>
+  <td></td>
+  <td>Skin Temp</td>
+  <td>33.4</td>
+  <td>33.2</td>
+  <td style="color:var(--text2);font-weight:600">-0.22</td>
+  <td style="color:var(--text2);font-weight:600">--</td>
+</tr><tr>
+  <td><b>P2(A+) -> P3(A+)</b></td>
+  <td>Deep Sleep</td>
+  <td>98.8</td>
+  <td>101.2</td>
+  <td style="color:var(--text2);font-weight:600">+0.11</td>
+  <td style="color:var(--text2);font-weight:600">--</td>
+</tr><tr>
+  <td></td>
+  <td>HRV</td>
+  <td>28.5</td>
+  <td>31.5</td>
+  <td style="color:var(--text2);font-weight:600">+0.80</td>
+  <td style="color:var(--green);font-weight:600">Day 4</td>
+</tr><tr>
+  <td></td>
+  <td>Recovery</td>
+  <td>58.0</td>
+  <td>60.3</td>
+  <td style="color:var(--text2);font-weight:600">+0.16</td>
+  <td style="color:var(--green);font-weight:600">Day 4</td>
+</tr><tr>
+  <td></td>
+  <td>RHR</td>
+  <td>62.0</td>
+  <td>61.0</td>
+  <td style="color:var(--text2);font-weight:600">-0.39</td>
+  <td style="color:var(--green);font-weight:600">Day 3</td>
+</tr><tr>
+  <td></td>
+  <td>Skin Temp</td>
+  <td>33.8</td>
+  <td>33.6</td>
+  <td style="color:var(--text2);font-weight:600">-0.33</td>
+  <td style="color:var(--text2);font-weight:600">--</td>
+</tr><tr>
+  <td><b>P5(B+) -> P6(B-)</b></td>
+  <td>Deep Sleep</td>
+  <td>97.3</td>
+  <td>93.5</td>
+  <td style="color:var(--text2);font-weight:600">-0.23</td>
+  <td style="color:var(--text2);font-weight:600">--</td>
+</tr><tr>
+  <td></td>
+  <td>HRV</td>
+  <td>30.0</td>
+  <td>30.1</td>
+  <td style="color:var(--text2);font-weight:600">+0.01</td>
+  <td style="color:var(--text2);font-weight:600">--</td>
+</tr><tr>
+  <td></td>
+  <td>Recovery</td>
+  <td>53.1</td>
+  <td>61.4</td>
+  <td style="color:var(--text2);font-weight:600">+0.48</td>
+  <td style="color:var(--green);font-weight:600">Day 5</td>
+</tr><tr>
+  <td></td>
+  <td>RHR</td>
+  <td>59.9</td>
+  <td>59.4</td>
+  <td style="color:var(--text2);font-weight:600">-0.16</td>
+  <td style="color:var(--green);font-weight:600">Day 5</td>
+</tr><tr>
+  <td></td>
+  <td>Skin Temp</td>
+  <td>33.9</td>
+  <td>33.9</td>
+  <td style="color:var(--text2);font-weight:600">+0.07</td>
+  <td style="color:var(--text2);font-weight:600">--</td>
+</tr><tr>
+  <td><b>P6(B-) -> P7(A+)</b></td>
+  <td>Deep Sleep</td>
+  <td>94.3</td>
+  <td>87.0</td>
+  <td style="color:var(--text2);font-weight:600">-0.40</td>
+  <td style="color:var(--green);font-weight:600">Day 6</td>
+</tr><tr>
+  <td></td>
+  <td>HRV</td>
+  <td>30.2</td>
+  <td>28.6</td>
+  <td style="color:var(--text2);font-weight:600">-0.43</td>
+  <td style="color:var(--green);font-weight:600">Day 5</td>
+</tr><tr>
+  <td></td>
+  <td>Recovery</td>
+  <td>59.1</td>
+  <td>60.5</td>
+  <td style="color:var(--text2);font-weight:600">+0.08</td>
+  <td style="color:var(--green);font-weight:600">Day 6</td>
+</tr><tr>
+  <td></td>
+  <td>RHR</td>
+  <td>59.3</td>
+  <td>60.5</td>
+  <td style="color:var(--text2);font-weight:600">+0.48</td>
+  <td style="color:var(--green);font-weight:600">Day 4</td>
+</tr><tr>
+  <td></td>
+  <td>Skin Temp</td>
+  <td>34.1</td>
+  <td>33.6</td>
+  <td style="color:var(--text2);font-weight:600">-0.99</td>
+  <td style="color:var(--green);font-weight:600">Day 9</td>
+</tr></tbody></table></div>
+<h2 id="aci" class="scroll-mt">Autonomic Concordance Index (ACI)</h2>
+<div class="card">
+<p>Novel algorithm: instead of using raw wearable values (which fail due to the inverted-U problem),
+ACI uses the <b>correlation structure between signals</b>. When the dose is right, sympathetic and
+parasympathetic signals are concordant. When overdosed, they diverge (RHR drops but HRV also drops,
+temperature up but sleep quality down).</p>
+<p style="font-size:12px"><b>Method:</b> 7-day rolling Spearman correlation matrix across 5 signals &rarr;
+Frobenius distance from A+ template &rarr; normalized ACI score (1 = optimal match).
+Directional arm uses z-scored skin temp &minus; z-scored RHR to differentiate overdose from underdose.</p>
+<div class="verdict pass">
+ACI VALIDATED: A+ protocols have higher concordance (separation = +0.087).
+A+ protocols average 0.480 ACI vs non-A+ 0.393.
+</div><h3>ACI by Protocol</h3>
+<table>
+<thead><tr><th>Protocol</th><th>Rating</th><th>ACI Mean</th><th>Direction</th>
+<th>% Optimal</th><th>% Overdosed</th><th>% Underdosed</th><th>% Suboptimal</th><th>Days</th></tr></thead>
+<tbody><tr>
+  <td><span style="color:#fb923c;font-weight:700">P1</span></td>
+  <td style="color:#fb923c">C</td>
+  <td style="color:var(--yellow);font-weight:700">0.494 +/- 0.166</td>
+  <td>-0.17</td>
+  <td style="font-weight:600;color:var(--green)">28%</td>
+  <td style="color:var(--red)">10%</td>
+  <td style="color:var(--accent)">38%</td>
+  <td>24%</td>
+  <td>29</td>
+</tr><tr>
+  <td><span style="color:#22c55e;font-weight:700">P2</span></td>
+  <td style="color:#22c55e">A+</td>
+  <td style="color:var(--yellow);font-weight:700">0.493 +/- 0.159</td>
+  <td>-0.11</td>
+  <td style="font-weight:600;color:var(--green)">26%</td>
+  <td style="color:var(--red)">8%</td>
+  <td style="color:var(--accent)">32%</td>
+  <td>34%</td>
+  <td>47</td>
+</tr><tr>
+  <td><span style="color:#22c55e;font-weight:700">P3</span></td>
+  <td style="color:#22c55e">A+</td>
+  <td style="color:var(--yellow);font-weight:700">0.443 +/- 0.158</td>
+  <td>+0.04</td>
+  <td style="font-weight:600;color:var(--green)">22%</td>
+  <td style="color:var(--red)">24%</td>
+  <td style="color:var(--accent)">26%</td>
+  <td>28%</td>
+  <td>81</td>
+</tr><tr>
+  <td><span style="color:#60a5fa;font-weight:700">P5</span></td>
+  <td style="color:#60a5fa">B+</td>
+  <td style="color:var(--red);font-weight:700">0.328 +/- 0.177</td>
+  <td>+0.44</td>
+  <td style="font-weight:600;color:var(--green)">21%</td>
+  <td style="color:var(--red)">42%</td>
+  <td style="color:var(--accent)">32%</td>
+  <td>5%</td>
+  <td>19</td>
+</tr><tr>
+  <td><span style="color:#fbbf24;font-weight:700">P6</span></td>
+  <td style="color:#fbbf24">B-</td>
+  <td style="color:var(--red);font-weight:700">0.357 +/- 0.191</td>
+  <td>+0.84</td>
+  <td style="font-weight:600;color:var(--green)">18%</td>
+  <td style="color:var(--red)">54%</td>
+  <td style="color:var(--accent)">0%</td>
+  <td>27%</td>
+  <td>11</td>
+</tr><tr>
+  <td><span style="color:#22c55e;font-weight:700">P7</span></td>
+  <td style="color:#22c55e">A+</td>
+  <td style="color:var(--yellow);font-weight:700">0.504 +/- 0.172</td>
+  <td>+0.13</td>
+  <td style="font-weight:600;color:var(--green)">36%</td>
+  <td style="color:var(--red)">13%</td>
+  <td style="color:var(--accent)">13%</td>
+  <td>39%</td>
+  <td>31</td>
+</tr></tbody></table>
+<h3>Daily ACI Time Series</h3>
+<svg width="1040" height="200" style="margin:12px 0">
+  <rect x="40" y="10" width="132" height="160" fill="#fb923c" opacity="0.07"/><text x="106" y="195" text-anchor="middle" fill="#fb923c" font-size="9" opacity="0.6">P1</text><rect x="172" y="10" width="214" height="160" fill="#22c55e" opacity="0.07"/><text x="280" y="195" text-anchor="middle" fill="#22c55e" font-size="9" opacity="0.6">P2</text><rect x="387" y="10" width="370" height="160" fill="#22c55e" opacity="0.07"/><text x="571" y="195" text-anchor="middle" fill="#22c55e" font-size="9" opacity="0.6">P3</text><rect x="756" y="10" width="87" height="160" fill="#60a5fa" opacity="0.07"/><text x="800" y="195" text-anchor="middle" fill="#60a5fa" font-size="9" opacity="0.6">P5</text><rect x="843" y="10" width="50" height="160" fill="#fbbf24" opacity="0.07"/><text x="868" y="195" text-anchor="middle" fill="#fbbf24" font-size="9" opacity="0.6">P6</text><rect x="893" y="10" width="141" height="160" fill="#22c55e" opacity="0.07"/><text x="964" y="195" text-anchor="middle" fill="#22c55e" font-size="9" opacity="0.6">P7</text>
+  <text x="36" y="173" text-anchor="end" fill="#94a3b8" font-size="10">0.00</text><line x1="40" y1="170" x2="1030" y2="170" stroke="#334155" stroke-width="0.5"/><text x="36" y="133.0" text-anchor="end" fill="#94a3b8" font-size="10">0.25</text><line x1="40" y1="130.0" x2="1030" y2="130.0" stroke="#334155" stroke-width="0.5"/><text x="36" y="93.0" text-anchor="end" fill="#94a3b8" font-size="10">0.50</text><line x1="40" y1="90.0" x2="1030" y2="90.0" stroke="#334155" stroke-width="0.5"/><text x="36" y="53.0" text-anchor="end" fill="#94a3b8" font-size="10">0.75</text><line x1="40" y1="50.0" x2="1030" y2="50.0" stroke="#334155" stroke-width="0.5"/><text x="36" y="13.0" text-anchor="end" fill="#94a3b8" font-size="10">1.00</text><line x1="40" y1="10.0" x2="1030" y2="10.0" stroke="#334155" stroke-width="0.5"/>
+  <polyline points="40.0,90.3 44.6,89.8 49.1,101.7 53.7,88.2 58.2,87.7 62.8,81.7 67.4,78.5 71.9,90.3 76.5,166.4 81.1,132.9 85.6,148.4 90.2,120.5 94.7,90.4 99.3,86.1 103.9,74.6 108.4,58.6 113.0,63.2 117.6,109.9 122.1,93.4 126.7,96.3 131.2,72.6 135.8,64.0 140.4,57.0 144.9,48.6 149.5,59.0 154.1,92.4 158.6,97.4 163.2,94.7 167.7,103.1 172.3,117.7 176.9,91.5 181.4,76.7 186.0,76.7 190.6,76.8 195.1,68.9 199.7,70.7 204.2,82.0 208.8,93.1 213.4,92.4 217.9,140.7 222.5,111.0 227.1,94.9 231.6,80.7 236.2,67.1 240.7,77.1 245.3,85.4 249.9,81.8 254.4,87.8 259.0,70.9 263.5,69.5 268.1,49.4 272.7,65.6 277.2,70.1 281.8,59.1 286.4,53.4 290.9,47.1 295.5,80.5 300.0,92.5 304.6,105.5 309.2,116.4 313.7,116.2 318.3,93.3 322.9,113.0 327.4,113.0 332.0,144.7 336.5,113.3 341.1,89.3 345.7,85.1 350.2,82.4 354.8,78.3 359.4,80.0 363.9,76.3 368.5,116.7 373.0,134.5 377.6,138.9 382.2,153.9 386.7,130.2 391.3,108.0 395.9,98.0 400.4,79.0 405.0,112.4 409.5,112.4 414.1,114.3 418.7,139.9 423.2,148.7 427.8,86.7 432.4,79.8 436.9,126.1 441.5,104.4 446.0,111.5 450.6,111.5 455.2,89.9 459.7,85.0 464.3,74.0 468.8,96.9 473.4,99.1 478.0,126.3 482.5,106.8 487.1,101.0 491.7,99.4 496.2,93.3 500.8,100.5 505.3,125.7 509.9,96.3 514.5,132.8 519.0,124.8 523.6,104.5 528.2,106.5 532.7,99.1 537.3,85.0 541.8,105.2 546.4,69.3 551.0,57.5 555.5,68.6 560.1,54.6 564.7,71.2 569.2,100.2 573.8,114.6 578.3,159.9 582.9,167.3 587.5,167.3 592.0,124.7 596.6,84.5 601.2,64.9 605.7,53.6 610.3,99.7 614.8,91.8 619.4,120.9 624.0,111.2 628.5,77.7 633.1,62.0 637.6,78.9 642.2,64.6 646.8,71.7 651.3,133.7 655.9,119.1 660.5,113.1 665.0,96.7 669.6,59.0 674.1,73.9 678.7,98.9 683.3,65.3 687.8,70.2 692.4,76.4 697.0,84.5 701.5,102.3 706.1,70.9 710.6,76.2 715.2,85.3 719.8,104.6 724.3,116.5 728.9,102.0 733.5,135.9 738.0,95.4 742.6,96.6 747.1,107.0 751.7,92.5 756.3,127.0 760.8,119.8 765.4,120.2 770.0,134.8 774.5,153.6 779.1,129.8 783.6,141.6 788.2,149.7 792.8,143.0 797.3,132.6 801.9,83.1 806.5,75.8 811.0,67.3 815.6,74.9 820.1,72.2 824.7,113.7 829.3,122.2 833.8,131.8 838.4,139.5 842.9,149.2 847.5,153.3 852.1,72.4 856.6,67.6 861.2,80.3 865.8,101.7 870.3,107.3 874.9,143.4 879.4,112.8 884.0,118.1 888.6,135.3 893.1,140.0 897.7,136.3 902.3,126.0 906.8,170.0 911.4,108.8 915.9,78.5 920.5,87.5 925.1,50.6 929.6,77.6 934.2,69.1 938.8,55.3 943.3,68.4 947.9,83.8 952.4,77.5 957.0,78.5 961.6,85.9 966.1,88.3 970.7,74.4 975.3,73.6 979.8,51.9 984.4,109.6 988.9,64.4 993.5,90.5 998.1,119.6 1002.6,109.6 1007.2,109.6 1011.8,75.9 1016.3,72.2 1020.9,84.2 1025.4,68.5 1030.0,84.4" fill="none" stroke="var(--accent)" stroke-width="1.5" opacity="0.7"/>
+  <circle cx="40.0" cy="90.3" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="49.1" cy="101.7" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="58.2" cy="87.7" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="67.4" cy="78.5" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="76.5" cy="166.4" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="85.6" cy="148.4" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="94.7" cy="90.4" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="103.9" cy="74.6" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="113.0" cy="63.2" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="122.1" cy="93.4" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="131.2" cy="72.6" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="140.4" cy="57.0" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="149.5" cy="59.0" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="158.6" cy="97.4" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="167.7" cy="103.1" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="176.9" cy="91.5" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="186.0" cy="76.7" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="195.1" cy="68.9" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="204.2" cy="82.0" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="213.4" cy="92.4" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="222.5" cy="111.0" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="231.6" cy="80.7" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="240.7" cy="77.1" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="249.9" cy="81.8" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="259.0" cy="70.9" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="268.1" cy="49.4" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="277.2" cy="70.1" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="286.4" cy="53.4" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="295.5" cy="80.5" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="304.6" cy="105.5" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="313.7" cy="116.2" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="322.9" cy="113.0" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="332.0" cy="144.7" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="341.1" cy="89.3" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="350.2" cy="82.4" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="359.4" cy="80.0" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="368.5" cy="116.7" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="377.6" cy="138.9" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="386.7" cy="130.2" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="395.9" cy="98.0" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="405.0" cy="112.4" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="414.1" cy="114.3" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="423.2" cy="148.7" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="432.4" cy="79.8" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="441.5" cy="104.4" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="450.6" cy="111.5" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="459.7" cy="85.0" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="468.8" cy="96.9" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="478.0" cy="126.3" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="487.1" cy="101.0" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="496.2" cy="93.3" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="505.3" cy="125.7" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="514.5" cy="132.8" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="523.6" cy="104.5" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="532.7" cy="99.1" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="541.8" cy="105.2" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="551.0" cy="57.5" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="560.1" cy="54.6" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="569.2" cy="100.2" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="578.3" cy="159.9" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="587.5" cy="167.3" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="596.6" cy="84.5" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="605.7" cy="53.6" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="614.8" cy="91.8" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="624.0" cy="111.2" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="633.1" cy="62.0" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="642.2" cy="64.6" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="651.3" cy="133.7" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="660.5" cy="113.1" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="669.6" cy="59.0" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="678.7" cy="98.9" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="687.8" cy="70.2" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="697.0" cy="84.5" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="706.1" cy="70.9" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="715.2" cy="85.3" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="724.3" cy="116.5" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="733.5" cy="135.9" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="742.6" cy="96.6" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="751.7" cy="92.5" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="760.8" cy="119.8" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="770.0" cy="134.8" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="779.1" cy="129.8" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="788.2" cy="149.7" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="797.3" cy="132.6" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="806.5" cy="75.8" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="815.6" cy="74.9" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="824.7" cy="113.7" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="833.8" cy="131.8" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="842.9" cy="149.2" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="852.1" cy="72.4" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="861.2" cy="80.3" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="870.3" cy="107.3" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="879.4" cy="112.8" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="888.6" cy="135.3" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="897.7" cy="136.3" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="906.8" cy="170.0" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="915.9" cy="78.5" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="925.1" cy="50.6" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="934.2" cy="69.1" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="943.3" cy="68.4" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="952.4" cy="77.5" r="2.5" fill="#ef4444" opacity="0.8"/><circle cx="961.6" cy="85.9" r="2.5" fill="#38bdf8" opacity="0.8"/><circle cx="970.7" cy="74.4" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="979.8" cy="51.9" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="988.9" cy="64.4" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="998.1" cy="119.6" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="1007.2" cy="109.6" r="2.5" fill="#64748b" opacity="0.8"/><circle cx="1016.3" cy="72.2" r="2.5" fill="#22c55e" opacity="0.8"/><circle cx="1025.4" cy="68.5" r="2.5" fill="#22c55e" opacity="0.8"/>
+</svg>
+<div style="display:flex;gap:16px;font-size:11px;color:var(--text2);margin-bottom:8px">
+  <span><span style="color:#22c55e">&#9679;</span> Optimal</span>
+  <span><span style="color:#ef4444">&#9679;</span> Overdosed</span>
+  <span><span style="color:#38bdf8">&#9679;</span> Underdosed</span>
+  <span><span style="color:#64748b">&#9679;</span> Suboptimal</span>
+</div>
+</div>
+<h2 id="viability" class="scroll-mt">Algorithm Viability Summary</h2>
+<div class="card">
+<table>
+<thead><tr><th>Algorithm</th><th>Depends On</th><th>Viable?</th><th>Notes</th></tr></thead>
+<tbody><tr>
+  <td style="font-weight:600">Autonomic Concordance Index (ACI)</td>
+  <td>Q1 + Built</td>
+  <td style="color:var(--green);font-weight:700">VIABLE</td>
+  <td style="font-size:12px;color:var(--text2)">ACI separation = +0.087, A+ optimal days = +5.4pp</td>
+</tr><tr>
+  <td style="font-weight:600">Individual Signal Predictor</td>
+  <td>Q2</td>
+  <td style="color:var(--green);font-weight:700">VIABLE</td>
+  <td style="font-size:12px;color:var(--text2)">Best AUC = 0.683 (rem_sleep_min)</td>
+</tr><tr>
+  <td style="font-weight:600">Circadian Stability Score</td>
+  <td>Q3</td>
+  <td style="color:var(--red);font-weight:700">NEEDS WORK</td>
+  <td style="font-size:12px;color:var(--text2)">Amplitude diff = 0.1 bpm</td>
+</tr><tr>
+  <td style="font-weight:600">Phase-Stratified Comparator</td>
+  <td>Q4</td>
+  <td style="color:var(--red);font-weight:700">NEEDS WORK</td>
+  <td style="font-size:12px;color:var(--text2)">Rankings stable -- lower priority</td>
+</tr><tr>
+  <td style="font-weight:600">Change-Point Transition Detector</td>
+  <td>Q5</td>
+  <td style="color:var(--green);font-weight:700">VIABLE</td>
+  <td style="font-size:12px;color:var(--text2)">Avg detection lag = 5.3 days</td>
+</tr><tr>
+  <td style="font-weight:600">Bayesian Dose-Response Surface</td>
+  <td>Q1+Q2</td>
+  <td style="color:var(--green);font-weight:700">VIABLE</td>
+  <td style="font-size:12px;color:var(--text2)">Needs good outcome metric from Q1 or Q2</td>
+</tr></tbody></table></div>
+
+<footer>
+  Analysis: exploratory_predictive.py &middot;
+  Data: Whoop wearable export + protocols_ariel.json &middot;
+  Generated 2026-02-19 15:01
+</footer>
+
+</body>
+</html>

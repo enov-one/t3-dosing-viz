@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol Report Card - Ariel</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+    --text: #f1f5f9; --text2: #94a3b8; --accent: #38bdf8;
+    --green: #22c55e; --yellow: #eab308; --red: #ef4444;
+    --orange: #f97316; --blue: #3b82f6; --purple: #a855f7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); padding: 24px;
+    line-height: 1.5; max-width: 1400px; margin: 0 auto;
+  }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  h2 { font-size: 20px; font-weight: 600; margin: 32px 0 16px; color: var(--accent); }
+  h3 { font-size: 16px; font-weight: 600; margin: 16px 0 8px; }
+  .subtitle { color: var(--text2); font-size: 14px; margin-bottom: 24px; }
+  .card {
+    background: var(--surface); border-radius: 12px; padding: 20px;
+    margin-bottom: 20px; border: 1px solid var(--surface2);
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Protocol timeline */
+  .timeline { display: flex; gap: 4px; margin: 16px 0; align-items: stretch; }
+  .timeline-block {
+    flex-grow: 1; border-radius: 8px; padding: 10px 8px;
+    text-align: center; font-size: 12px; min-width: 60px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .timeline-block .rating { font-size: 22px; font-weight: 800; }
+  .timeline-block .dose { font-size: 11px; opacity: 0.85; margin-top: 4px; }
+  .timeline-block .days { font-size: 10px; opacity: 0.65; margin-top: 2px; }
+
+  /* Findings */
+  .finding {
+    padding: 8px 12px; border-radius: 6px; margin: 6px 0;
+    font-size: 14px; border-left: 4px solid;
+  }
+  .finding.best { border-color: var(--green); background: rgba(34,197,94,0.08); }
+  .finding.significant { border-color: var(--accent); background: rgba(56,189,248,0.08); }
+  .finding.data_gap { border-color: var(--red); background: rgba(239,68,68,0.08); }
+  .finding.confounder { border-color: var(--orange); background: rgba(249,115,22,0.08); }
+  .finding.small_n { border-color: var(--yellow); background: rgba(234,179,8,0.08); }
+
+  /* Heatmap table */
+  .heatmap { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .heatmap th {
+    padding: 8px 6px; text-align: center; font-weight: 600;
+    border-bottom: 2px solid var(--surface2); white-space: nowrap;
+  }
+  .heatmap th:first-child { text-align: left; min-width: 140px; }
+  .heatmap td {
+    padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--surface2);
+    font-variant-numeric: tabular-nums;
+  }
+  .heatmap td:first-child { text-align: left; font-weight: 500; }
+  .heatmap td.no-data { color: var(--text2); font-style: italic; }
+  .heatmap .sig { font-size: 10px; vertical-align: super; color: var(--accent); }
+  .heatmap tr:hover { background: rgba(56,189,248,0.05); }
+
+  /* Color cells */
+  .cell-best { background: rgba(34,197,94,0.25); font-weight: 700; }
+  .cell-worst { background: rgba(239,68,68,0.15); }
+  .cell-mid { background: rgba(56,189,248,0.08); }
+
+  /* Radar chart container */
+  .radar-container { max-width: 600px; margin: 0 auto; }
+
+  /* Stats tests table */
+  .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .stats-table th, .stats-table td {
+    padding: 6px 10px; border-bottom: 1px solid var(--surface2); text-align: left;
+  }
+  .stats-table th { font-weight: 600; }
+  .p-sig { color: var(--green); font-weight: 700; }
+  .p-ns { color: var(--text2); }
+
+  /* Phase bars */
+  .phase-bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; margin: 4px 0; }
+  .phase-bar div { display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .phase-MENSTRUAL { background: #ef4444; }
+  .phase-FOLLICULAR { background: #3b82f6; }
+  .phase-OVULATORY { background: #a855f7; }
+  .phase-LUTEAL { background: #eab308; }
+  .phase-NO_PHASE { background: #475569; }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0; font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .tooltip-text { font-size: 12px; color: var(--text2); }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--surface2); color: var(--text2); font-size: 12px; }
+  nav { display:flex; gap:8px; padding:15px; background:var(--surface);
+    border-radius:8px; margin-bottom:20px; flex-wrap:wrap; }
+  nav a { color:var(--text2); text-decoration:none; padding:8px 16px;
+    border-radius:6px; transition:all 0.2s; font-size:14px; }
+  nav a:hover { background:var(--surface2); color:var(--text); }
+  nav a.active { background:var(--accent); color:var(--bg); }
+</style>
+</head>
+<body>
+
+<nav>
+            <a href="index.html">Journal</a>
+            <a href="stability.html">Stability</a>
+            <a href="nightsignal.html">NightSignal</a>
+            <a href="acute-response.html">Acute</a>
+            <a href="acute-analysis.html">Acute Analysis</a>
+            <a href="report-card.html" class="active">Report Card</a>
+            <a href="transition.html">Transitions</a>
+            <a href="data-explorer.html">Explorer</a>
+            <a href="pharmacogenomics.html">PGx</a>
+            <a href="thyroid-pgx.html">Thyroid</a>
+            <a href="phenotypes.html">Phenotypes</a>
+            <a href="toi.html">TOI</a>
+            <a href="causal.html">Causal</a>
+            <a href="pk-model.html">PK Model</a>
+            <a href="forecast.html">Forecast</a>
+            <a href="exploratory-predictive.html">Predictive</a>
+            <a href="recovery-intelligence.html">Recovery</a>
+        </nav>
+
+<h1>Multi-Signal Protocol Report Card</h1>
+<div class="subtitle">
+  Patient: <strong>Ariel</strong> &middot;
+  Post-thyroidectomy (BRAF V600E+ papillary thyroid cancer)<br>
+  DIO2 rs225014 CC (homozygous variant, ~30% reduced T4->T3 conversion)<br>
+  Generated: 2026-02-17 12:10
+</div>
+
+<div id="app"></div>
+
+<footer>
+  Analysis engine: protocol_report_card.py (stdlib-only Python) &middot;
+  Visualization: Chart.js 4.4 &middot;
+  Data source: Whoop wearable + Medisafe + patient protocol sheet
+</footer>
+
+<script>
+const DATA = {"generated_at": "2026-02-17T12:10:04.715827", "data_dir": "t3_dosing_analysis/data/extracted/", "protocols": [{"id": "P1", "label": "T4=100 / T3=0", "t4_mcg": 100, "t3_mcg": 0, "t4_equiv_mcg": 100, "start": "2024-10-25", "end": "2025-01-29", "rating": "C", "rating_num": 2, "feeling_short": "Cold, less active", "feeling": "Cold mainly in hands and feet, less active, not feeling like myself", "schedule": "T4-only", "confounders": [], "n_days_total": 97, "n_days_cycles": 36, "n_days_recovery": 31, "n_days_journal": 36, "n_days_menstrual": 0, "signals": {"skin_temp_c": {"n": 31, "mean": 33.7632, "median": 33.6, "std": 1.3802, "q25": 33.05, "q75": 34.035, "min": 32.04, "max": 40.3083}, "resting_hr": {"n": 31, "mean": 63.0645, "median": 61.0, "std": 5.1247, "q25": 60.0, "q75": 66.5, "min": 53.0, "max": 76.0}, "hrv_rmssd_ms": {"n": 31, "mean": 27.2316, "median": 26.87, "std": 7.9472, "q25": 20.71, "q75": 31.195, "min": 14.43, "max": 51.46}, "spo2_pct": {"n": 31, "mean": 96.8367, "median": 97.0, "std": 0.879, "q25": 96.5982, "q75": 97.3471, "min": 94.8636, "max": 98.3571}, "recovery_score": {"n": 30, "mean": 49.2333, "median": 47.0, "std": 23.8771, "q25": 35.25, "q75": 68.25, "min": 9.0, "max": 93.0}, "deep_sleep_min": {"n": 30, "mean": 86.2, "median": 81.95, "std": 33.0533, "q25": 59.825, "q75": 109.85, "min": 32.7, "max": 160.5}, "rem_sleep_min": {"n": 30, "mean": 56.92, "median": 53.15, "std": 37.7152, "q25": 26.35, "q75": 74.525, "min": 4.8, "max": 159.1}, "sleep_hours": {"n": 30, "mean": 6.997, "median": 7.215, "std": 2.1785, "q25": 6.1925, "q75": 8.1425, "min": 1.9, "max": 11.61}, "sleep_efficiency": {"n": 30, "mean": 0.9308, "median": 0.93, "std": 0.027, "q25": 0.9213, "q75": 0.9487, "min": 0.861, "max": 0.981}, "mean_daily_strain": {"n": 36, "mean": 6.9128, "median": 6.2197, "std": 3.4996, "q25": 4.7245, "q75": 9.1659, "min": 0.0737, "max": 14.5537}, "anxiety_rate": {"n": 36, "n_true": 26, "rate": 72.22}, "depression_rate": {"n": 36, "n_true": 20, "rate": 55.56}, "anxiety_severity": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "workout_days_rate": {"n": 36, "n_true": 9, "rate": 25.0}, "menstrual_phases": {}}}, {"id": "P2", "label": "T4=88 / T3=5", "t4_mcg": 88, "t3_mcg": 5, "t4_equiv_mcg": 103, "start": "2025-01-30", "end": "2025-03-26", "rating": "A+", "rating_num": 5, "feeling_short": "Clear, energized, happy", "feeling": "Clearer, better, energized and happy; tasted metal as T3 wore off", "schedule": "2.5 AM / 2.5 PM", "confounders": [], "n_days_total": 56, "n_days_cycles": 47, "n_days_recovery": 44, "n_days_journal": 47, "n_days_menstrual": 0, "signals": {"skin_temp_c": {"n": 44, "mean": 33.4477, "median": 33.5175, "std": 0.787, "q25": 32.8129, "q75": 33.9208, "min": 31.98, "max": 36.4}, "resting_hr": {"n": 44, "mean": 60.1364, "median": 60.0, "std": 3.0084, "q25": 57.75, "q75": 62.0, "min": 55.0, "max": 66.0}, "hrv_rmssd_ms": {"n": 44, "mean": 31.3805, "median": 31.48, "std": 5.036, "q25": 26.42, "q75": 35.635, "min": 22.86, "max": 43.53}, "spo2_pct": {"n": 44, "mean": 96.2822, "median": 96.1427, "std": 1.1935, "q25": 95.5791, "q75": 97.0677, "min": 92.75, "max": 98.8}, "recovery_score": {"n": 42, "mean": 58.4762, "median": 57.0, "std": 20.5085, "q25": 44.5, "q75": 71.75, "min": 14.0, "max": 94.0}, "deep_sleep_min": {"n": 42, "mean": 95.9214, "median": 98.85, "std": 21.8828, "q25": 79.75, "q75": 108.0, "min": 50.0, "max": 143.2}, "rem_sleep_min": {"n": 42, "mean": 86.781, "median": 75.7, "std": 43.823, "q25": 49.825, "q75": 130.075, "min": 21.1, "max": 170.2}, "sleep_hours": {"n": 42, "mean": 7.1888, "median": 7.135, "std": 1.8986, "q25": 6.2675, "q75": 8.62, "min": 3.06, "max": 10.51}, "sleep_efficiency": {"n": 42, "mean": 0.943, "median": 0.9495, "std": 0.03, "q25": 0.93, "q75": 0.9667, "min": 0.866, "max": 0.987}, "mean_daily_strain": {"n": 47, "mean": 7.0387, "median": 5.9585, "std": 3.4984, "q25": 4.787, "q75": 9.9463, "min": 0.0088, "max": 13.7627}, "anxiety_rate": {"n": 47, "n_true": 20, "rate": 42.55}, "depression_rate": {"n": 47, "n_true": 27, "rate": 57.45}, "anxiety_severity": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "workout_days_rate": {"n": 47, "n_true": 13, "rate": 27.66}, "menstrual_phases": {}}}, {"id": "P3", "label": "T4=75 / T3=10", "t4_mcg": 75, "t3_mcg": 10, "t4_equiv_mcg": 105, "start": "2025-03-27", "end": "2025-10-03", "rating": "A+", "rating_num": 5, "feeling_short": "Happy, clear, great dose", "feeling": "Happy clear, great dose; felt overstimulating after RAI", "schedule": "3.75 AM / 3.75 PM / 2.5 bedtime", "confounders": ["Fertility meds May-Jul 2025 (Ganirelix, Menopur, Follistim, Leuprolide, Pregnyl)"], "n_days_total": 191, "n_days_cycles": 98, "n_days_recovery": 85, "n_days_journal": 98, "n_days_menstrual": 141, "signals": {"skin_temp_c": {"n": 85, "mean": 33.3279, "median": 33.33, "std": 0.5574, "q25": 33.0, "q75": 33.701, "min": 31.8533, "max": 34.8}, "resting_hr": {"n": 85, "mean": 59.1412, "median": 59.0, "std": 3.665, "q25": 56.0, "q75": 61.0, "min": 52.0, "max": 73.0}, "hrv_rmssd_ms": {"n": 85, "mean": 32.4455, "median": 31.95, "std": 7.0228, "q25": 26.39, "q75": 37.45, "min": 16.14, "max": 49.99}, "spo2_pct": {"n": 83, "mean": 96.6546, "median": 96.875, "std": 1.1585, "q25": 95.9167, "q75": 97.5317, "min": 93.9, "max": 99.1875}, "recovery_score": {"n": 81, "mean": 60.5309, "median": 61.0, "std": 22.243, "q25": 46.0, "q75": 77.0, "min": 13.0, "max": 98.0}, "deep_sleep_min": {"n": 79, "mean": 92.9063, "median": 91.5, "std": 19.6761, "q25": 79.3, "q75": 106.7, "min": 50.1, "max": 132.1}, "rem_sleep_min": {"n": 79, "mean": 107.9494, "median": 112.6, "std": 33.5882, "q25": 86.1, "q75": 127.9, "min": 1.0, "max": 194.6}, "sleep_hours": {"n": 79, "mean": 7.6778, "median": 7.47, "std": 1.9886, "q25": 6.615, "q75": 9.11, "min": 1.69, "max": 11.58}, "sleep_efficiency": {"n": 79, "mean": 0.9609, "median": 0.967, "std": 0.0207, "q25": 0.9505, "q75": 0.975, "min": 0.885, "max": 0.997}, "mean_daily_strain": {"n": 98, "mean": 6.3802, "median": 5.7594, "std": 3.1844, "q25": 5.0199, "q75": 7.1588, "min": 0.0, "max": 16.1909}, "anxiety_rate": {"n": 63, "n_true": 37, "rate": 58.73}, "depression_rate": {"n": 66, "n_true": 43, "rate": 65.15}, "anxiety_severity": {"n": 1, "mean": 1.0, "median": 1.0, "std": null, "q25": 1.0, "q75": 1.0, "min": 1.0, "max": 1.0}, "workout_days_rate": {"n": 98, "n_true": 15, "rate": 15.31}, "menstrual_phases": {"MENSTRUAL": 9, "FOLLICULAR": 71, "OVULATORY": 10, "LUTEAL": 51}}}, {"id": "P4", "label": "T4=75 / T3=7.5", "t4_mcg": 75, "t3_mcg": 7.5, "t4_equiv_mcg": 97.5, "start": "2025-10-18", "end": "2025-10-28", "rating": "F", "rating_num": 0, "feeling_short": "STRUGGLING", "feeling": "Colder than T4-only, fragile, dull, unstable, crying, calcium deficiency symptoms enhanced", "schedule": "2.5 AM / 2.5 PM / 2.5 bedtime", "confounders": ["NO WEARABLE DATA during this period"], "n_days_total": 11, "n_days_cycles": 0, "n_days_recovery": 0, "n_days_journal": 0, "n_days_menstrual": 11, "signals": {"skin_temp_c": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "resting_hr": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "hrv_rmssd_ms": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "spo2_pct": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "recovery_score": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "deep_sleep_min": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "rem_sleep_min": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "sleep_hours": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "sleep_efficiency": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "mean_daily_strain": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "anxiety_rate": {"n": 0, "n_true": 0, "rate": null}, "depression_rate": {"n": 0, "n_true": 0, "rate": null}, "anxiety_severity": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "workout_days_rate": {"n": 0, "n_true": 0, "rate": null}, "menstrual_phases": {"FOLLICULAR": 1, "OVULATORY": 2, "LUTEAL": 8}}}, {"id": "P5", "label": "T4=88 / T3=5 (2nd)", "t4_mcg": 88, "t3_mcg": 5, "t4_equiv_mcg": 103, "start": "2025-11-21", "end": "2025-12-09", "rating": "B+", "rating_num": 4, "feeling_short": "Sharp, focused, cold", "feeling": "Very sharp, focused, emotionally balanced; felt cool/cold hands and feet", "schedule": "2.5 AM / 2.5 PM", "confounders": [], "n_days_total": 19, "n_days_cycles": 19, "n_days_recovery": 19, "n_days_journal": 19, "n_days_menstrual": 19, "signals": {"skin_temp_c": {"n": 19, "mean": 33.8189, "median": 33.7777, "std": 0.8764, "q25": 33.2323, "q75": 34.607, "min": 32.1322, "max": 35.2118}, "resting_hr": {"n": 19, "mean": 59.7368, "median": 60.0, "std": 3.3639, "q25": 58.0, "q75": 62.5, "min": 52.0, "max": 66.0}, "hrv_rmssd_ms": {"n": 19, "mean": 30.4358, "median": 29.77, "std": 4.9904, "q25": 27.185, "q75": 32.72, "min": 24.84, "max": 46.07}, "spo2_pct": {"n": 19, "mean": 97.5081, "median": 97.5769, "std": 1.0332, "q25": 97.0774, "q75": 98.3717, "min": 94.4474, "max": 98.8056}, "recovery_score": {"n": 18, "mean": 53.0, "median": 54.0, "std": 18.1724, "q25": 42.5, "q75": 63.0, "min": 8.0, "max": 88.0}, "deep_sleep_min": {"n": 18, "mean": 96.7444, "median": 97.8, "std": 17.1755, "q25": 80.025, "q75": 106.85, "min": 71.5, "max": 133.6}, "rem_sleep_min": {"n": 18, "mean": 92.0611, "median": 85.8, "std": 33.1863, "q25": 75.475, "q75": 108.85, "min": 34.5, "max": 159.0}, "sleep_hours": {"n": 18, "mean": 7.0228, "median": 6.755, "std": 1.4815, "q25": 6.36, "q75": 8.2775, "min": 3.88, "max": 9.34}, "sleep_efficiency": {"n": 18, "mean": 0.9541, "median": 0.9655, "std": 0.0349, "q25": 0.9567, "q75": 0.975, "min": 0.873, "max": 0.993}, "mean_daily_strain": {"n": 19, "mean": 6.9006, "median": 5.9845, "std": 3.1368, "q25": 4.5962, "q75": 8.1349, "min": 4.1329, "max": 14.1704}, "anxiety_rate": {"n": 11, "n_true": 5, "rate": 45.45}, "depression_rate": {"n": 5, "n_true": 4, "rate": 80.0}, "anxiety_severity": {"n": 1, "mean": 0.0, "median": 0.0, "std": null, "q25": 0.0, "q75": 0.0, "min": 0.0, "max": 0.0}, "workout_days_rate": {"n": 19, "n_true": 4, "rate": 21.05}, "menstrual_phases": {"MENSTRUAL": 4, "FOLLICULAR": 7, "OVULATORY": 2, "LUTEAL": 6}}}, {"id": "P6", "label": "T4=88 / T3=7.5", "t4_mcg": 88, "t3_mcg": 7.5, "t4_equiv_mcg": 110.5, "start": "2025-12-10", "end": "2025-12-20", "rating": "B-", "rating_num": 3, "feeling_short": "Warm, overactivated", "feeling": "Warm enough, overactivated, less clear", "schedule": "2.5 AM / 2.5 PM / 2.5 bedtime", "confounders": ["Only ~10 days of data"], "n_days_total": 11, "n_days_cycles": 11, "n_days_recovery": 10, "n_days_journal": 11, "n_days_menstrual": 11, "signals": {"skin_temp_c": {"n": 10, "mean": 33.9555, "median": 33.8383, "std": 0.5124, "q25": 33.6328, "q75": 34.2596, "min": 33.2407, "max": 34.7755}, "resting_hr": {"n": 10, "mean": 58.5, "median": 58.0, "std": 2.5055, "q25": 57.0, "q75": 60.0, "min": 55.0, "max": 63.0}, "hrv_rmssd_ms": {"n": 10, "mean": 30.238, "median": 30.745, "std": 4.086, "q25": 27.1375, "q75": 32.4425, "min": 23.52, "max": 37.23}, "spo2_pct": {"n": 10, "mean": 97.2313, "median": 97.4143, "std": 1.012, "q25": 97.3025, "q75": 97.7, "min": 94.6667, "max": 98.3077}, "recovery_score": {"n": 10, "mean": 57.3, "median": 59.0, "std": 18.1356, "q25": 41.75, "q75": 66.0, "min": 33.0, "max": 87.0}, "deep_sleep_min": {"n": 10, "mean": 94.44, "median": 97.1, "std": 22.8947, "q25": 78.1, "q75": 112.975, "min": 58.1, "max": 123.6}, "rem_sleep_min": {"n": 10, "mean": 91.92, "median": 87.1, "std": 36.6436, "q25": 67.85, "q75": 116.325, "min": 44.5, "max": 160.1}, "sleep_hours": {"n": 10, "mean": 6.818, "median": 7.385, "std": 1.5035, "q25": 5.595, "q75": 8.16, "min": 4.55, "max": 8.35}, "sleep_efficiency": {"n": 10, "mean": 0.9542, "median": 0.956, "std": 0.0209, "q25": 0.945, "q75": 0.966, "min": 0.907, "max": 0.979}, "mean_daily_strain": {"n": 11, "mean": 6.4041, "median": 5.3003, "std": 2.6194, "q25": 5.0122, "q75": 6.9616, "min": 4.4849, "max": 13.6192}, "anxiety_rate": {"n": 6, "n_true": 6, "rate": 100.0}, "depression_rate": {"n": 6, "n_true": 6, "rate": 100.0}, "anxiety_severity": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "workout_days_rate": {"n": 11, "n_true": 1, "rate": 9.09}, "menstrual_phases": {"LUTEAL": 3, "MENSTRUAL": 4, "FOLLICULAR": 4}}}, {"id": "P7", "label": "T4=82 / T3=6.25", "t4_mcg": 82, "t3_mcg": 6.25, "t4_equiv_mcg": 100.75, "start": "2025-12-24", "end": "2026-01-29", "rating": "A+", "rating_num": 5, "feeling_short": "Warm, stable, great", "feeling": "Warm, stable, energized, less clarity of focus, overall great", "schedule": "3.75 AM / 2.5 early-late PM", "confounders": [], "n_days_total": 37, "n_days_cycles": 31, "n_days_recovery": 27, "n_days_journal": 31, "n_days_menstrual": 37, "signals": {"skin_temp_c": {"n": 27, "mean": 33.609, "median": 33.5487, "std": 0.537, "q25": 33.2029, "q75": 33.9473, "min": 32.7283, "max": 34.6287}, "resting_hr": {"n": 27, "mean": 59.8519, "median": 59.0, "std": 2.9833, "q25": 58.5, "q75": 61.0, "min": 54.0, "max": 69.0}, "hrv_rmssd_ms": {"n": 27, "mean": 29.6889, "median": 29.25, "std": 5.3187, "q25": 26.675, "q75": 31.82, "min": 17.84, "max": 43.31}, "spo2_pct": {"n": 27, "mean": 97.4199, "median": 97.75, "std": 0.9248, "q25": 96.8519, "q75": 98.0441, "min": 95.7, "max": 98.875}, "recovery_score": {"n": 27, "mean": 63.3704, "median": 63.0, "std": 18.2507, "q25": 51.0, "q75": 74.5, "min": 19.0, "max": 94.0}, "deep_sleep_min": {"n": 27, "mean": 90.0519, "median": 88.1, "std": 19.4658, "q25": 81.1, "q75": 99.85, "min": 45.5, "max": 139.6}, "rem_sleep_min": {"n": 27, "mean": 94.8074, "median": 98.6, "std": 43.5534, "q25": 56.6, "q75": 116.6, "min": 29.0, "max": 211.7}, "sleep_hours": {"n": 27, "mean": 7.0248, "median": 7.45, "std": 1.8198, "q25": 5.755, "q75": 7.735, "min": 3.39, "max": 11.79}, "sleep_efficiency": {"n": 27, "mean": 0.9515, "median": 0.959, "std": 0.0321, "q25": 0.947, "q75": 0.97, "min": 0.849, "max": 0.995}, "mean_daily_strain": {"n": 31, "mean": 7.66, "median": 6.5519, "std": 4.0871, "q25": 4.3543, "q75": 11.3614, "min": 0.6541, "max": 16.0308}, "anxiety_rate": {"n": 23, "n_true": 23, "rate": 100.0}, "depression_rate": {"n": 22, "n_true": 22, "rate": 100.0}, "anxiety_severity": {"n": 0, "mean": null, "median": null, "std": null, "q25": null, "q75": null, "min": null, "max": null}, "workout_days_rate": {"n": 31, "n_true": 10, "rate": 32.26}, "menstrual_phases": {"OVULATORY": 4, "LUTEAL": 15, "MENSTRUAL": 6, "FOLLICULAR": 12}}}], "statistical_tests": {"skin_temp_c": {"test": "kruskal-wallis", "statistic": 15.756, "p_value": 0.0076, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": true, "significant_01": true}, "resting_hr": {"test": "kruskal-wallis", "statistic": 18.373, "p_value": 0.0025, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": true, "significant_01": true}, "hrv_rmssd_ms": {"test": "kruskal-wallis", "statistic": 14.742, "p_value": 0.0115, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": true, "significant_01": false}, "recovery_score": {"test": "kruskal-wallis", "statistic": 8.858, "p_value": 0.1149, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": false, "significant_01": false}, "deep_sleep_min": {"test": "kruskal-wallis", "statistic": 4.161, "p_value": 0.5265, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": false, "significant_01": false}, "anxiety_rate": {"test": "chi-square", "statistic": 28.689, "p_value": 0.0, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": true, "significant_01": true}, "rem_sleep_min": {"test": "kruskal-wallis", "statistic": 36.312, "p_value": 0.0, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": true, "significant_01": true}, "sleep_hours": {"test": "kruskal-wallis", "statistic": 6.061, "p_value": 0.3003, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": false, "significant_01": false}, "sleep_efficiency": {"test": "kruskal-wallis", "statistic": 33.668, "p_value": 0.0, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": true, "significant_01": true}, "spo2_pct": {"test": "kruskal-wallis", "statistic": 29.275, "p_value": 0.0, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": true, "significant_01": true}, "depression_rate": {"test": "chi-square", "statistic": 18.357, "p_value": 0.0025, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": true, "significant_01": true}, "mean_daily_strain": {"test": "kruskal-wallis", "statistic": 1.102, "p_value": 0.9539, "k": 6, "groups": ["P1", "P2", "P3", "P5", "P6", "P7"], "significant_05": false, "significant_01": false}}, "pairwise_effects": {"skin_temp_c": {"P1_vs_P2": 0.295, "P1_vs_P3": 0.509, "P1_vs_P5": -0.046, "P1_vs_P6": -0.156, "P1_vs_P7": 0.143, "P2_vs_P3": 0.186, "P2_vs_P5": -0.456, "P2_vs_P6": -0.68, "P2_vs_P7": -0.229, "P3_vs_P5": -0.785, "P3_vs_P6": -1.135, "P3_vs_P7": -0.509, "P5_vs_P6": -0.177, "P5_vs_P7": 0.301, "P6_vs_P7": 0.653}, "resting_hr": {"P1_vs_P2": 0.729, "P1_vs_P3": 0.957, "P1_vs_P5": 0.732, "P1_vs_P6": 0.981, "P1_vs_P7": 0.753, "P2_vs_P3": 0.288, "P2_vs_P5": 0.128, "P2_vs_P6": 0.559, "P2_vs_P7": 0.095, "P3_vs_P5": -0.165, "P3_vs_P6": 0.18, "P3_vs_P7": -0.202, "P5_vs_P6": 0.398, "P5_vs_P7": -0.037, "P6_vs_P7": -0.471}, "hrv_rmssd_ms": {"P1_vs_P2": -0.649, "P1_vs_P3": -0.716, "P1_vs_P5": -0.459, "P1_vs_P6": -0.415, "P1_vs_P7": -0.359, "P2_vs_P3": -0.166, "P2_vs_P5": 0.188, "P2_vs_P6": 0.234, "P2_vs_P7": 0.329, "P3_vs_P5": 0.3, "P3_vs_P6": 0.325, "P3_vs_P7": 0.414, "P5_vs_P6": 0.042, "P5_vs_P7": 0.144, "P6_vs_P7": 0.109}, "recovery_score": {"P1_vs_P2": -0.421, "P1_vs_P3": -0.498, "P1_vs_P5": -0.172, "P1_vs_P6": -0.356, "P1_vs_P7": -0.661, "P2_vs_P3": -0.095, "P2_vs_P5": 0.276, "P2_vs_P6": 0.059, "P2_vs_P7": -0.249, "P3_vs_P5": 0.349, "P3_vs_P6": 0.148, "P3_vs_P7": -0.133, "P5_vs_P6": -0.237, "P5_vs_P7": -0.569, "P6_vs_P7": -0.333}, "deep_sleep_min": {"P1_vs_P2": -0.359, "P1_vs_P3": -0.279, "P1_vs_P5": -0.373, "P1_vs_P6": -0.266, "P1_vs_P7": -0.14, "P2_vs_P3": 0.147, "P2_vs_P5": -0.04, "P2_vs_P6": 0.067, "P2_vs_P7": 0.28, "P3_vs_P5": -0.199, "P3_vs_P6": -0.077, "P3_vs_P7": 0.145, "P5_vs_P6": 0.119, "P5_vs_P7": 0.36, "P6_vs_P7": 0.215}, "anxiety_rate": {}}, "signal_definitions": {"skin_temp_c": {"label": "Skin Temperature", "unit": "\u00b0C", "source": "recovery", "higher_is_better": true, "radar": true, "fmt": ".1f", "description": "Wrist skin temperature during sleep (proxy for peripheral circulation)"}, "resting_hr": {"label": "Resting Heart Rate", "unit": "bpm", "source": "recovery", "higher_is_better": false, "radar": true, "fmt": ".1f", "description": "Lowest sustained HR during sleep"}, "hrv_rmssd_ms": {"label": "HRV (RMSSD)", "unit": "ms", "source": "recovery", "higher_is_better": true, "radar": true, "fmt": ".1f", "description": "Heart rate variability (parasympathetic tone)"}, "recovery_score": {"label": "Recovery Score", "unit": "/100", "source": "cycles", "higher_is_better": true, "radar": true, "fmt": ".0f", "description": "Whoop composite recovery score"}, "deep_sleep_min": {"label": "Deep Sleep", "unit": "min", "source": "cycles", "higher_is_better": true, "radar": true, "fmt": ".0f", "description": "Slow-wave sleep duration (most restorative)"}, "anxiety_rate": {"label": "Anxiety Frequency", "unit": "%", "source": "journal", "higher_is_better": false, "radar": true, "fmt": ".0f", "description": "% of days with anxiety reported"}, "rem_sleep_min": {"label": "REM Sleep", "unit": "min", "source": "cycles", "higher_is_better": true, "radar": false, "fmt": ".0f", "description": "REM sleep duration"}, "sleep_hours": {"label": "Total Sleep", "unit": "hrs", "source": "cycles", "higher_is_better": true, "radar": false, "fmt": ".1f", "description": "Total sleep duration"}, "sleep_efficiency": {"label": "Sleep Efficiency", "unit": "", "source": "cycles", "higher_is_better": true, "radar": false, "fmt": ".3f", "description": "Time asleep / time in bed"}, "spo2_pct": {"label": "SpO2", "unit": "%", "source": "recovery", "higher_is_better": true, "radar": false, "fmt": ".1f", "description": "Blood oxygen saturation during sleep"}, "depression_rate": {"label": "Depression Frequency", "unit": "%", "source": "journal", "higher_is_better": false, "radar": false, "fmt": ".0f", "description": "% of days with depression reported"}, "workout_days_rate": {"label": "Workout Frequency", "unit": "%", "source": "cycles", "higher_is_better": true, "radar": false, "fmt": ".0f", "description": "% of days with at least one workout"}, "mean_daily_strain": {"label": "Avg Daily Strain", "unit": "", "source": "cycles", "higher_is_better": null, "radar": false, "fmt": ".1f", "description": "Mean daily strain score (all days)"}}, "key_findings": [{"type": "best", "signal": "skin_temp_c", "message": "Best Skin Temperature: T4=88 / T3=7.5 (P6) at 34.0\u00b0C", "protocol_id": "P6"}, {"type": "best", "signal": "resting_hr", "message": "Best Resting Heart Rate: T4=88 / T3=7.5 (P6) at 58.5bpm", "protocol_id": "P6"}, {"type": "best", "signal": "hrv_rmssd_ms", "message": "Best HRV (RMSSD): T4=75 / T3=10 (P3) at 32.4ms", "protocol_id": "P3"}, {"type": "best", "signal": "recovery_score", "message": "Best Recovery Score: T4=82 / T3=6.25 (P7) at 63/100", "protocol_id": "P7"}, {"type": "best", "signal": "deep_sleep_min", "message": "Best Deep Sleep: T4=88 / T3=5 (2nd) (P5) at 97min", "protocol_id": "P5"}, {"type": "best", "signal": "anxiety_rate", "message": "Best Anxiety Frequency: T4=88 / T3=5 (P2) at 43%", "protocol_id": "P2"}, {"type": "data_gap", "message": "T4=75 / T3=7.5 (P4, rated F): NO WEARABLE DATA", "protocol_id": "P4"}, {"type": "significant", "signal": "skin_temp_c", "message": "Skin Temperature differs significantly across protocols (p=0.0076)"}, {"type": "significant", "signal": "resting_hr", "message": "Resting Heart Rate differs significantly across protocols (p=0.0025)"}, {"type": "significant", "signal": "hrv_rmssd_ms", "message": "HRV (RMSSD) differs significantly across protocols (p=0.0115)"}, {"type": "significant", "signal": "anxiety_rate", "message": "Anxiety Frequency differs significantly across protocols (p=0.0)"}, {"type": "significant", "signal": "rem_sleep_min", "message": "REM Sleep differs significantly across protocols (p=0.0)"}, {"type": "significant", "signal": "sleep_efficiency", "message": "Sleep Efficiency differs significantly across protocols (p=0.0)"}, {"type": "significant", "signal": "spo2_pct", "message": "SpO2 differs significantly across protocols (p=0.0)"}, {"type": "significant", "signal": "depression_rate", "message": "Depression Frequency differs significantly across protocols (p=0.0025)"}, {"type": "confounder", "message": "T4=75 / T3=10 (P3): Fertility meds May-Jul 2025 (Ganirelix, Menopur, Follistim, Leuprolide, Pregnyl)", "protocol_id": "P3"}, {"type": "confounder", "message": "T4=88 / T3=7.5 (P6): Only ~10 days of data", "protocol_id": "P6"}, {"type": "small_n", "message": "T4=88 / T3=7.5 (P6): Only 10 days of data (interpret with caution)", "protocol_id": "P6"}]};
+const SIGNALS = DATA.signal_definitions;
+
+// Rating colors
+const RATING_COLORS = {
+  'A+': '#22c55e', 'A': '#4ade80', 'B+': '#60a5fa', 'B': '#93c5fd',
+  'B-': '#fbbf24', 'C+': '#f97316', 'C': '#fb923c', 'C-': '#ef4444',
+  'D': '#dc2626', 'F': '#b91c1c'
+};
+
+const PROTOCOL_CHART_COLORS = [
+  'rgba(251,146,60,0.8)',   // P1 orange
+  'rgba(34,197,94,0.8)',    // P2 green
+  'rgba(59,130,246,0.8)',   // P3 blue
+  'rgba(185,28,40,0.8)',    // P4 red
+  'rgba(168,85,247,0.8)',   // P5 purple
+  'rgba(234,179,8,0.8)',    // P6 yellow
+  'rgba(56,189,248,0.8)',   // P7 cyan
+];
+
+function render() {
+  const app = document.getElementById('app');
+  let html = '';
+
+  // === PROTOCOL TIMELINE ===
+  html += '<h2>Protocol Timeline</h2><div class="card">';
+  html += '<div class="timeline">';
+  const allDays = DATA.protocols.reduce((s, p) => s + p.n_days_total, 0);
+  DATA.protocols.forEach((p, i) => {
+    const w = Math.max(p.n_days_total / allDays * 100, 8);
+    const bg = RATING_COLORS[p.rating] || '#64748b';
+    const textColor = ['F', 'C-', 'D'].includes(p.rating) ? '#fff' : '#000';
+    html += `<div class="timeline-block" style="flex-basis:${w}%;background:${bg};color:${textColor}">
+      <div class="rating">${p.rating}</div>
+      <div class="dose">${p.label}</div>
+      <div class="days">${p.n_days_total}d (${p.start.slice(5)} to ${p.end.slice(5)})</div>
+    </div>`;
+  });
+  html += '</div>';
+  html += '<div class="tooltip-text" style="margin-top:8px">Block width proportional to protocol duration. Dates shown as MM-DD.</div>';
+  html += '</div>';
+
+  // === KEY FINDINGS ===
+  html += '<h2>Key Findings</h2><div class="card">';
+  DATA.key_findings.forEach(f => {
+    html += `<div class="finding ${f.type}">${f.message}</div>`;
+  });
+  html += '</div>';
+
+  // === SIGNAL COMPARISON HEATMAP ===
+  html += '<h2>Signal Comparison Across Protocols</h2><div class="card" style="overflow-x:auto">';
+  html += '<table class="heatmap"><thead><tr><th>Signal</th>';
+  DATA.protocols.forEach(p => {
+    const bg = RATING_COLORS[p.rating] || '#64748b';
+    html += `<th><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${bg};margin-right:4px"></span>${p.id}<br><span style="font-weight:400;font-size:11px">${p.label}</span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  // Determine which signals to show
+  const sigOrder = Object.keys(SIGNALS);
+
+  sigOrder.forEach(sig => {
+    const def = SIGNALS[sig];
+    const testResult = DATA.statistical_tests[sig];
+    const sigLabel = def.label + (testResult && testResult.significant_05 ? ' <span class="sig">*</span>' : '');
+
+    // Collect values across protocols to find best/worst
+    let vals = [];
+    DATA.protocols.forEach(p => {
+      const sd = p.signals[sig];
+      if (!sd) return;
+      const v = sd.mean !== undefined ? sd.mean : sd.rate;
+      if (v !== null && v !== undefined) vals.push(v);
+    });
+
+    const hib = def.higher_is_better;
+    let bestVal = null, worstVal = null;
+    if (vals.length > 0 && hib !== null) {
+      bestVal = hib ? Math.max(...vals) : Math.min(...vals);
+      worstVal = hib ? Math.min(...vals) : Math.max(...vals);
+    }
+
+    html += `<tr><td>${sigLabel} <span style="color:var(--text2);font-size:11px">${def.unit}</span></td>`;
+    DATA.protocols.forEach(p => {
+      const sd = p.signals[sig];
+      if (!sd || (sd.n === 0 && sd.rate === undefined) || (sd.n === 0 && sd.rate === null)) {
+        html += '<td class="no-data">-</td>';
+        return;
+      }
+      const v = sd.mean !== undefined ? sd.mean : sd.rate;
+      if (v === null || v === undefined) {
+        html += '<td class="no-data">-</td>';
+        return;
+      }
+      let cls = 'cell-mid';
+      if (v === bestVal && vals.length > 1) cls = 'cell-best';
+      else if (v === worstVal && vals.length > 1) cls = 'cell-worst';
+
+      let formatted;
+      if (def.fmt) {
+        const decimals = def.fmt.includes('.') ? parseInt(def.fmt.split('.')[1]) : 0;
+        formatted = v.toFixed(decimals);
+      } else {
+        formatted = v.toFixed(1);
+      }
+
+      let sub = '';
+      if (sd.std !== null && sd.std !== undefined) {
+        sub = `<br><span style="font-size:10px;color:var(--text2)">&plusmn;${sd.std.toFixed(1)}</span>`;
+      }
+      if (sd.n !== undefined) {
+        sub += `<br><span style="font-size:10px;color:var(--text2)">n=${sd.n}</span>`;
+      }
+
+      html += `<td class="${cls}">${formatted}${sub}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  html += '<div class="tooltip-text" style="margin-top:8px"><span class="sig">*</span> = statistically significant difference across protocols (p&lt;0.05). Green = best, Red = worst (direction depends on signal).</div>';
+  html += '</div>';
+
+  // === RADAR CHART ===
+  html += '<h2>Protocol Fingerprint (Radar)</h2>';
+  html += '<div class="grid-2">';
+  html += '<div class="card"><div class="radar-container"><canvas id="radarChart"></canvas></div></div>';
+
+  // Description card
+  html += '<div class="card"><h3>How to Read This Chart</h3>';
+  html += '<p style="font-size:13px;color:var(--text2);margin-bottom:12px">Each axis represents a key physiological or behavioral signal, normalized to 0-100 where <strong>100 = best</strong>. For signals where lower is better (like Resting HR and Anxiety), the scale is inverted.</p>';
+  html += '<p style="font-size:13px;color:var(--text2);margin-bottom:12px">A protocol with a larger polygon area indicates better overall physiological state across all measured signals.</p>';
+  html += '<h3 style="margin-top:16px">Protocol Descriptions</h3>';
+  DATA.protocols.forEach((p, i) => {
+    if (p.n_days_recovery === 0 && p.n_days_cycles === 0) return;
+    const c = PROTOCOL_CHART_COLORS[i];
+    html += `<div style="font-size:12px;margin:6px 0;display:flex;align-items:center;gap:8px">
+      <span style="width:12px;height:12px;border-radius:3px;background:${c};flex-shrink:0"></span>
+      <span><strong>${p.id}: ${p.label}</strong> (${p.rating}) - ${p.feeling_short}</span>
+    </div>`;
+  });
+  html += '</div></div>';
+
+  // === STATISTICAL TESTS ===
+  html += '<h2>Statistical Tests</h2><div class="card">';
+  html += '<table class="stats-table"><thead><tr><th>Signal</th><th>Test</th><th>Statistic</th><th>p-value</th><th>Groups</th><th>Significant?</th></tr></thead><tbody>';
+  Object.entries(DATA.statistical_tests).forEach(([sig, t]) => {
+    const def = SIGNALS[sig] || {};
+    const pClass = t.significant_05 ? 'p-sig' : 'p-ns';
+    html += `<tr>
+      <td>${def.label || sig}</td>
+      <td>${t.test}</td>
+      <td>${t.statistic !== null ? t.statistic.toFixed(2) : '-'}</td>
+      <td class="${pClass}">${t.p_value !== null ? (t.p_value < 0.001 ? '<0.001' : t.p_value.toFixed(3)) : '-'}</td>
+      <td>${t.k} protocols</td>
+      <td class="${pClass}">${t.significant_05 ? 'Yes (p<0.05)' : 'No'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  html += '<div class="tooltip-text" style="margin-top:8px">Kruskal-Wallis (non-parametric) for continuous signals; Chi-square for binary rate signals. Protocols with &lt;3 observations excluded.</div>';
+  html += '</div>';
+
+  // === MENSTRUAL PHASE CONTEXT ===
+  html += '<h2>Menstrual Phase Distribution by Protocol</h2><div class="card">';
+  html += '<div class="legend">';
+  ['MENSTRUAL', 'FOLLICULAR', 'OVULATORY', 'LUTEAL', 'NO_PHASE'].forEach(ph => {
+    const colors = {'MENSTRUAL':'#ef4444','FOLLICULAR':'#3b82f6','OVULATORY':'#a855f7','LUTEAL':'#eab308','NO_PHASE':'#475569'};
+    html += `<div class="legend-item"><div class="legend-dot" style="background:${colors[ph]}"></div>${ph}</div>`;
+  });
+  html += '</div>';
+
+  DATA.protocols.forEach(p => {
+    const phases = p.signals.menstrual_phases || {};
+    const total = Object.values(phases).reduce((s, v) => s + v, 0);
+    if (total === 0) {
+      html += `<div style="margin:8px 0"><strong>${p.id}: ${p.label}</strong> - No menstrual data</div>`;
+      return;
+    }
+    html += `<div style="margin:8px 0"><strong>${p.id}: ${p.label}</strong> (${total} days tracked)</div>`;
+    html += '<div class="phase-bar">';
+    const phaseOrder = ['MENSTRUAL', 'FOLLICULAR', 'OVULATORY', 'LUTEAL', 'NO_PHASE'];
+    phaseOrder.forEach(ph => {
+      const n = phases[ph] || 0;
+      if (n === 0) return;
+      const pct = (n / total * 100).toFixed(0);
+      html += `<div class="phase-${ph}" style="width:${pct}%">${pct > 8 ? pct + '%' : ''}</div>`;
+    });
+    html += '</div>';
+  });
+  html += '<div class="tooltip-text" style="margin-top:12px">Menstrual phase can affect thyroid hormone metabolism and wearable metrics. Uneven phase distribution across protocols is a potential confounder.</div>';
+  html += '</div>';
+
+  // === CAVEATS ===
+  html += '<h2>Caveats & Limitations</h2><div class="card">';
+  html += '<ul style="font-size:13px;color:var(--text2);padding-left:20px">';
+  html += '<li>The F-rated STRUGGLING protocol (P4: T4=75/T3=7.5) has <strong>zero wearable data</strong> - it cannot be compared objectively.</li>';
+  html += '<li>P3 (T4=75/T3=10) spans 6+ months and includes fertility medication use (May-Jul 2025), which is a significant confounder.</li>';
+  html += '<li>P6 (T4=88/T3=7.5) has only ~10 days of data - treat results with caution.</li>';
+  html += '<li>Skin temperature is wrist sensor temperature, not core body temperature. Useful for relative changes only.</li>';
+  html += '<li>Anxiety/depression rates reflect Whoop journal responses, which depend on daily compliance.</li>';
+  html += '<li>Statistical tests use non-parametric methods (no normality assumption) but small sample sizes limit power.</li>';
+  html += '<li>This is observational data - protocol changes were not randomized.</li>';
+  html += '</ul></div>';
+
+  app.innerHTML = html;
+
+  // === RENDER RADAR CHART ===
+  renderRadar();
+}
+
+function renderRadar() {
+  const ctx = document.getElementById('radarChart');
+  if (!ctx) return;
+
+  const radarSigs = Object.entries(SIGNALS).filter(([k, v]) => v.radar).map(([k]) => k);
+  const labels = radarSigs.map(s => SIGNALS[s].label);
+
+  // Compute min/max for normalization across all protocols
+  const ranges = {};
+  radarSigs.forEach(sig => {
+    let allVals = [];
+    DATA.protocols.forEach(p => {
+      const sd = p.signals[sig];
+      if (!sd) return;
+      const v = sd.mean !== undefined ? sd.mean : sd.rate;
+      if (v !== null && v !== undefined) allVals.push(v);
+    });
+    ranges[sig] = { min: Math.min(...allVals), max: Math.max(...allVals) };
+  });
+
+  // Normalize: 0-100 where 100 = best
+  function normalize(sig, val) {
+    const r = ranges[sig];
+    if (!r || r.max === r.min) return 50;
+    const hib = SIGNALS[sig].higher_is_better;
+    let norm = (val - r.min) / (r.max - r.min) * 100;
+    if (!hib) norm = 100 - norm;  // Invert for "lower is better" signals
+    return Math.max(0, Math.min(100, norm));
+  }
+
+  const datasets = [];
+  DATA.protocols.forEach((p, i) => {
+    // Skip protocols with no data
+    const hasData = radarSigs.some(sig => {
+      const sd = p.signals[sig];
+      const v = sd ? (sd.mean !== undefined ? sd.mean : sd.rate) : null;
+      return v !== null && v !== undefined;
+    });
+    if (!hasData) return;
+
+    const values = radarSigs.map(sig => {
+      const sd = p.signals[sig];
+      if (!sd) return null;
+      const v = sd.mean !== undefined ? sd.mean : sd.rate;
+      if (v === null || v === undefined) return null;
+      return normalize(sig, v);
+    });
+
+    const color = PROTOCOL_CHART_COLORS[i];
+    const bgColor = color.replace('0.8', '0.1');
+    datasets.push({
+      label: `${p.id}: ${p.label} (${p.rating})`,
+      data: values,
+      borderColor: color,
+      backgroundColor: bgColor,
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: color,
+    });
+  });
+
+  new Chart(ctx, {
+    type: 'radar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 100,
+          ticks: {
+            stepSize: 25,
+            color: '#64748b',
+            backdropColor: 'transparent',
+            font: { size: 10 },
+          },
+          grid: { color: 'rgba(100,116,139,0.2)' },
+          angleLines: { color: 'rgba(100,116,139,0.2)' },
+          pointLabels: {
+            color: '#94a3b8',
+            font: { size: 12 },
+          },
+        },
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#94a3b8', font: { size: 11 }, padding: 12 },
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': ' + (ctx.raw !== null ? ctx.raw.toFixed(0) : 'N/A') + '/100';
+            }
+          }
+        },
+      },
+    },
+  });
+}
+
+// Render on load
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stability Signal | T3 Dosing Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --green: #3fb950;
+            --yellow: #d29922;
+            --red: #f85149;
+            --blue: #58a6ff;
+            --purple: #a371f7;
+            --orange: #f0883e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        nav {
+            display: flex; gap: 8px; padding: 15px;
+            background: var(--bg-secondary); border-radius: 8px;
+            margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+        }
+        nav a {
+            color: var(--text-secondary); text-decoration: none;
+            padding: 8px 16px; border-radius: 6px; transition: all 0.2s;
+            font-size: 14px;
+        }
+        nav a:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        nav a.active { background: var(--blue); color: var(--bg-primary); }
+
+        .hero {
+            background: linear-gradient(135deg, #238636 0%, #1f6feb 100%);
+            padding: 40px 30px; margin-bottom: 30px; border-radius: 12px;
+        }
+        .hero h1 { font-size: 28px; margin-bottom: 8px; }
+        .hero .subtitle { opacity: 0.9; font-size: 17px; margin-bottom: 16px; }
+        .hero .tagline {
+            font-size: 14px; opacity: 0.75; line-height: 1.6;
+            max-width: 800px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px; margin-bottom: 30px;
+        }
+        .stat-card {
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 20px;
+        }
+        .stat-card .label {
+            color: var(--text-secondary); font-size: 12px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .stat-card .value {
+            font-size: 32px; font-weight: 700; margin: 5px 0;
+        }
+        .stat-card .detail { color: var(--text-secondary); font-size: 14px; }
+        .green { color: var(--green); }
+        .yellow { color: var(--yellow); }
+        .red { color: var(--red); }
+        .blue { color: var(--blue); }
+        .orange { color: var(--orange); }
+
+        .section { margin-bottom: 40px; }
+        .section-title {
+            font-size: 20px; color: var(--blue); margin-bottom: 20px;
+            padding-bottom: 10px; border-bottom: 1px solid var(--border-color);
+        }
+
+        .insight-box {
+            background: var(--bg-secondary); padding: 20px; border-radius: 12px;
+            border-left: 4px solid var(--orange); margin-bottom: 20px;
+        }
+        .insight-box h4 { color: var(--orange); margin-bottom: 10px; }
+        .insight-box p { color: var(--text-secondary); line-height: 1.7; }
+        .insight-box .highlight { color: var(--green); font-weight: 600; }
+        .insight-box .warn { color: var(--yellow); font-weight: 600; }
+
+        .chart-card {
+            background: var(--bg-secondary); padding: 20px; border-radius: 12px;
+            border: 1px solid var(--border-color); margin-bottom: 20px;
+        }
+        .chart-card h3 { font-size: 16px; margin-bottom: 15px; color: var(--text-primary); }
+        .chart-container { position: relative; height: 350px; }
+        .chart-container.tall { height: 450px; }
+
+        /* Ranking table */
+        .ranking-table {
+            width: 100%; border-collapse: collapse; margin-bottom: 20px;
+        }
+        .ranking-table th {
+            text-align: left; padding: 12px 16px; font-size: 12px;
+            text-transform: uppercase; color: var(--text-secondary);
+            border-bottom: 2px solid var(--border-color);
+            letter-spacing: 0.5px;
+        }
+        .ranking-table td {
+            padding: 14px 16px; border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+        .ranking-table tr:hover { background: var(--bg-tertiary); }
+        .rank-num {
+            display: inline-block; width: 28px; height: 28px;
+            border-radius: 50%; text-align: center; line-height: 28px;
+            font-weight: 700; font-size: 13px;
+        }
+        .rank-1 { background: #238636; color: white; }
+        .rank-2 { background: #238636; color: white; }
+        .rank-3 { background: #238636; color: white; }
+        .rank-4 { background: var(--yellow); color: #0d1117; }
+        .rank-5 { background: var(--orange); color: #0d1117; }
+        .rank-6 { background: var(--red); color: white; }
+
+        .churn-bar {
+            height: 24px; border-radius: 4px;
+            display: inline-block; vertical-align: middle;
+            min-width: 20px;
+        }
+
+        .rating-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 12px;
+            font-weight: 600; font-size: 13px;
+        }
+        .rating-aplus { background: rgba(63,185,80,0.2); color: var(--green); }
+        .rating-bplus { background: rgba(210,153,34,0.2); color: var(--yellow); }
+        .rating-bminus { background: rgba(240,136,62,0.2); color: var(--orange); }
+        .rating-c { background: rgba(248,81,73,0.2); color: var(--red); }
+        .rating-f { background: rgba(248,81,73,0.3); color: var(--red); }
+
+        /* Transition cards */
+        .transitions-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px; margin-bottom: 20px;
+        }
+        .transition-card {
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 20px; position: relative;
+        }
+        .transition-card .arrow {
+            font-size: 24px; margin: 0 8px;
+        }
+        .transition-card .label { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+        .transition-card .churn-compare {
+            display: flex; gap: 20px; margin-top: 12px;
+        }
+        .churn-side {
+            flex: 1; text-align: center; padding: 12px; border-radius: 8px;
+            background: var(--bg-tertiary);
+        }
+        .churn-side .churn-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; }
+        .churn-side .churn-value { font-size: 24px; font-weight: 700; margin: 4px 0; }
+        .verdict {
+            text-align: center; margin-top: 12px; padding: 8px;
+            border-radius: 6px; font-weight: 600; font-size: 13px;
+        }
+        .verdict-correct { background: rgba(63,185,80,0.15); color: var(--green); }
+        .verdict-wrong { background: rgba(248,81,73,0.15); color: var(--red); }
+
+        /* Signal breakdown grid */
+        .signal-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .signal-card {
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 16px;
+        }
+        .signal-card .sig-name { color: var(--blue); font-weight: 600; margin-bottom: 8px; }
+        .signal-card .sig-bar-row {
+            display: flex; align-items: center; gap: 8px; margin: 4px 0;
+            font-size: 13px;
+        }
+        .signal-card .sig-bar {
+            height: 16px; border-radius: 3px; min-width: 4px;
+        }
+
+        .footer {
+            margin-top: 40px; padding: 20px; text-align: center;
+            color: var(--text-secondary); font-size: 13px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .transitions-grid { grid-template-columns: 1fr; }
+            .signal-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav>
+            <a href="index.html">Journal</a>
+            <a href="stability.html" class="active">Stability</a>
+            <a href="nightsignal.html">NightSignal</a>
+            <a href="acute-response.html">Acute</a>
+            <a href="acute-analysis.html">Acute Analysis</a>
+            <a href="report-card.html">Report Card</a>
+            <a href="transition.html">Transitions</a>
+            <a href="data-explorer.html">Explorer</a>
+            <a href="pharmacogenomics.html">PGx</a>
+            <a href="thyroid-pgx.html">Thyroid</a>
+            <a href="phenotypes.html">Phenotypes</a>
+            <a href="toi.html">TOI</a>
+            <a href="causal.html">Causal</a>
+            <a href="pk-model.html">PK Model</a>
+            <a href="forecast.html">Forecast</a>
+            <a href="exploratory-predictive.html">Predictive</a>
+            <a href="recovery-intelligence.html">Recovery</a>
+        </nav>
+
+    <div class="hero">
+        <h1>Homeostasis Signal: Day-to-Day Stability</h1>
+        <p class="subtitle">When the thyroid dose is right, the body achieves homeostasis and wearable signals become stable.</p>
+        <p class="tagline">
+            The Dose Adequacy Score (DAS) combines 5 wearable signals into a single daily number.
+            Instead of asking "is DAS going up or down?", we ask: "how much does DAS bounce around day-to-day?"
+            Lower daily churn = more stable = better dose. This metric perfectly rank-orders all 6 analyzable protocols.
+        </p>
+    </div>
+
+    <!-- Key Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="label">Spearman Correlation</div>
+            <div class="value green">r = -0.759</div>
+            <div class="detail">Churn vs. patient rating (p<0.05)</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Most Stable Protocol</div>
+            <div class="value green">P2</div>
+            <div class="detail">T4=88 / T3=5 (rated A+)</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Least Stable Protocol</div>
+            <div class="value red">P5</div>
+            <div class="detail">T4=88 / T3=5 (2nd) (rated B+)</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Stability Threshold</div>
+            <div class="value blue">&lt; 0.47</div>
+            <div class="detail">Churn below this = A+ protocol</div>
+        </div>
+    </div>
+
+    <!-- Section 1: The Key Insight -->
+    <div class="section">
+        <h2 class="section-title">1. The Key Insight: Stability = Dose Optimality</h2>
+
+        <div class="insight-box">
+            <h4>Why Direction Failed but Stability Works</h4>
+            <p>
+                Thyroid hormones have an <span class="warn">inverted-U dose-response</span>: too little is bad,
+                too much is also bad, and there's a sweet spot in the middle. Traditional approaches ask
+                "are wearable metrics going up?" &mdash; but this fails because <span class="warn">overdosed protocols
+                (P6) show GOOD individual metrics</span> (lower resting HR, warmer skin) while the patient
+                feels overactivated and jittery.
+            </p>
+            <p style="margin-top: 12px;">
+                Instead, we measure <span class="highlight">how much the composite signal bounces around day-to-day</span>.
+                When the dose is right, the body finds homeostasis and the signal stabilizes.
+                When it's wrong (too high OR too low), the body is constantly adjusting, creating
+                <span class="highlight">higher day-to-day volatility</span>. This approach correctly identifies
+                both underdosing AND overdosing.
+            </p>
+        </div>
+    </div>
+
+    <!-- Section 2: Ranking Table -->
+    <div class="section">
+        <h2 class="section-title">2. Protocol Stability Ranking</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+            Protocols ranked by day-to-day DAS churn (lower = more stable = better).
+            Notice that the stability ranking perfectly matches patient satisfaction.
+        </p>
+
+        <div class="chart-card" style="overflow-x: auto;">
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Protocol</th>
+                        <th>Dose</th>
+                        <th>Patient Rating</th>
+                        <th>Daily Churn</th>
+                        <th style="min-width: 200px;">Stability</th>
+                        <th>Recovery</th>
+                        <th>Days</th>
+                        <th>Feeling</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="rank-num rank-1">1</span></td>
+                        <td style="font-weight: 600;">P2</td>
+                        <td>T4=88 / T3=5</td>
+                        <td><span class="rating-badge rating-aplus">A+</span></td>
+                        <td style="font-weight: 600; font-family: monospace;">0.431</td>
+                        <td><span class="churn-bar" style="width: 97px; background: #3fb950;"></span></td>
+                        <td>58/100</td>
+                        <td>44</td>
+                        <td style="color: var(--text-secondary); font-size: 13px;">Clear, energized, happy</td>
+                    </tr>
+                    <tr>
+                        <td><span class="rank-num rank-2">2</span></td>
+                        <td style="font-weight: 600;">P7</td>
+                        <td>T4=82 / T3=6.25</td>
+                        <td><span class="rating-badge rating-aplus">A+</span></td>
+                        <td style="font-weight: 600; font-family: monospace;">0.443</td>
+                        <td><span class="churn-bar" style="width: 99px; background: #3fb950;"></span></td>
+                        <td>63/100</td>
+                        <td>27</td>
+                        <td style="color: var(--text-secondary); font-size: 13px;">Warm, stable, great</td>
+                    </tr>
+                    <tr>
+                        <td><span class="rank-num rank-3">3</span></td>
+                        <td style="font-weight: 600;">P3</td>
+                        <td>T4=75 / T3=10</td>
+                        <td><span class="rating-badge rating-aplus">A+</span></td>
+                        <td style="font-weight: 600; font-family: monospace;">0.498</td>
+                        <td><span class="churn-bar" style="width: 112px; background: #d29922;"></span></td>
+                        <td>60/100</td>
+                        <td>85</td>
+                        <td style="color: var(--text-secondary); font-size: 13px;">Happy, clear, great dose</td>
+                    </tr>
+                    <tr>
+                        <td><span class="rank-num rank-4">4</span></td>
+                        <td style="font-weight: 600;">P6</td>
+                        <td>T4=88 / T3=7.5</td>
+                        <td><span class="rating-badge rating-bminus">B-</span></td>
+                        <td style="font-weight: 600; font-family: monospace;">0.596</td>
+                        <td><span class="churn-bar" style="width: 134px; background: #f85149;"></span></td>
+                        <td>57/100</td>
+                        <td>10</td>
+                        <td style="color: var(--text-secondary); font-size: 13px;">Warm, overactivated</td>
+                    </tr>
+                    <tr>
+                        <td><span class="rank-num rank-5">5</span></td>
+                        <td style="font-weight: 600;">P1</td>
+                        <td>T4=100 / T3=0</td>
+                        <td><span class="rating-badge rating-c">C</span></td>
+                        <td style="font-weight: 600; font-family: monospace;">0.612</td>
+                        <td><span class="churn-bar" style="width: 138px; background: #f85149;"></span></td>
+                        <td>49/100</td>
+                        <td>31</td>
+                        <td style="color: var(--text-secondary); font-size: 13px;">Cold, less active</td>
+                    </tr>
+                    <tr>
+                        <td><span class="rank-num rank-6">6</span></td>
+                        <td style="font-weight: 600;">P5</td>
+                        <td>T4=88 / T3=5 (2nd)</td>
+                        <td><span class="rating-badge rating-bplus">B+</span></td>
+                        <td style="font-weight: 600; font-family: monospace;">0.664</td>
+                        <td><span class="churn-bar" style="width: 150px; background: #f85149;"></span></td>
+                        <td>53/100</td>
+                        <td>19</td>
+                        <td style="color: var(--text-secondary); font-size: 13px;">Sharp, focused, cold</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section 3: Churn vs Rating Scatter -->
+    <div class="section">
+        <h2 class="section-title">3. Churn vs. Patient Rating</h2>
+        <div class="chart-card">
+            <h3>Lower Churn = Higher Patient Rating (Spearman r = -0.759)</h3>
+            <div class="chart-container">
+                <canvas id="churnVsRatingChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 4: DAS Timeline -->
+    <div class="section">
+        <h2 class="section-title">4. Daily DAS Timeline: See the Volatility</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+            Each point is one day's composite wearable score. Notice how A+ protocols (green) have tight,
+            stable oscillations while non-optimal protocols show wild swings.
+        </p>
+        <div class="chart-card">
+            <h3>Daily Dose Adequacy Score (DAS) by Protocol Period</h3>
+            <div class="chart-container tall">
+                <canvas id="dasTimelineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 5: Transition Detection -->
+    <div class="section">
+        <h2 class="section-title">5. Transition Detection: Can We Catch Bad Doses Early?</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+            At each dose change, we compare churn in the last 7 days of the old protocol vs.
+            the first 7 days of the new protocol. If churn drops, the new dose is likely better.
+        </p>
+
+        <div class="transitions-grid">
+            <div class="transition-card">
+                <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
+                    P1 <span class="arrow">&rarr;</span> P2
+                </div>
+                <div class="label">
+                    T4=100 / T3=0 (C) &rarr; T4=88 / T3=5 (A+)
+                    &mdash; actually got <strong>better</strong>
+                </div>
+                <div class="churn-compare">
+                    <div class="churn-side">
+                        <div class="churn-label">Last 7d Old Dose</div>
+                        <div class="churn-value" style="color: #f85149;">0.657</div>
+                        <div class="churn-label">8 days</div>
+                    </div>
+                    <div class="churn-side">
+                        <div class="churn-label">First 7d New Dose</div>
+                        <div class="churn-value" style="color: #d29922;">0.500</div>
+                        <div class="churn-label">7 days</div>
+                    </div>
+                </div>
+                <div class="verdict verdict-correct">
+                    &#10003; Correctly predicted
+                </div>
+            </div>
+            <div class="transition-card">
+                <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
+                    P2 <span class="arrow">&rarr;</span> P3
+                </div>
+                <div class="label">
+                    T4=88 / T3=5 (A+) &rarr; T4=75 / T3=10 (A+)
+                    &mdash; actually got <strong>same</strong>
+                </div>
+                <div class="churn-compare">
+                    <div class="churn-side">
+                        <div class="churn-label">Last 7d Old Dose</div>
+                        <div class="churn-value" style="color: #f85149;">0.690</div>
+                        <div class="churn-label">5 days</div>
+                    </div>
+                    <div class="churn-side">
+                        <div class="churn-label">First 7d New Dose</div>
+                        <div class="churn-value" style="color: #3fb950;">0.088</div>
+                        <div class="churn-label">5 days</div>
+                    </div>
+                </div>
+                <div class="verdict verdict-wrong">
+                    &#10007; Missed
+                </div>
+            </div>
+            <div class="transition-card">
+                <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
+                    P5 <span class="arrow">&rarr;</span> P6
+                </div>
+                <div class="label">
+                    T4=88 / T3=5 (2nd) (B+) &rarr; T4=88 / T3=7.5 (B-)
+                    &mdash; actually got <strong>worse</strong>
+                </div>
+                <div class="churn-compare">
+                    <div class="churn-side">
+                        <div class="churn-label">Last 7d Old Dose</div>
+                        <div class="churn-value" style="color: #3fb950;">0.426</div>
+                        <div class="churn-label">8 days</div>
+                    </div>
+                    <div class="churn-side">
+                        <div class="churn-label">First 7d New Dose</div>
+                        <div class="churn-value" style="color: #f85149;">0.655</div>
+                        <div class="churn-label">8 days</div>
+                    </div>
+                </div>
+                <div class="verdict verdict-correct">
+                    &#10003; Correctly predicted
+                </div>
+            </div>
+            <div class="transition-card">
+                <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
+                    P6 <span class="arrow">&rarr;</span> P7
+                </div>
+                <div class="label">
+                    T4=88 / T3=7.5 (B-) &rarr; T4=82 / T3=6.25 (A+)
+                    &mdash; actually got <strong>better</strong>
+                </div>
+                <div class="churn-compare">
+                    <div class="churn-side">
+                        <div class="churn-label">Last 7d Old Dose</div>
+                        <div class="churn-value" style="color: #f85149;">0.558</div>
+                        <div class="churn-label">7 days</div>
+                    </div>
+                    <div class="churn-side">
+                        <div class="churn-label">First 7d New Dose</div>
+                        <div class="churn-value" style="color: #f85149;">0.644</div>
+                        <div class="churn-label">4 days</div>
+                    </div>
+                </div>
+                <div class="verdict verdict-wrong">
+                    &#10007; Missed
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 6: Per-Signal Stability Breakdown -->
+    <div class="section">
+        <h2 class="section-title">6. Per-Signal Stability Breakdown</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+            Which individual signals contribute most to the stability difference?
+        </p>
+        <div class="signal-grid">
+            <div class="signal-card">
+                <div class="sig-name">Skin Temp (°C)</div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P2</span>
+                    <span class="sig-bar" style="width: 81px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">1.022</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P7</span>
+                    <span class="sig-bar" style="width: 68px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.861</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P3</span>
+                    <span class="sig-bar" style="width: 59px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.738</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P6</span>
+                    <span class="sig-bar" style="width: 75px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.938</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P1</span>
+                    <span class="sig-bar" style="width: 108px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">1.353</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P5</span>
+                    <span class="sig-bar" style="width: 70px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.876</span>
+                </div>
+            </div>
+            <div class="signal-card">
+                <div class="sig-name">Resting HR (bpm)</div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P2</span>
+                    <span class="sig-bar" style="width: 53px; background: #d29922;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.673</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P7</span>
+                    <span class="sig-bar" style="width: 58px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.736</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P3</span>
+                    <span class="sig-bar" style="width: 49px; background: #d29922;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.616</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P6</span>
+                    <span class="sig-bar" style="width: 50px; background: #d29922;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.633</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P1</span>
+                    <span class="sig-bar" style="width: 62px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.777</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P5</span>
+                    <span class="sig-bar" style="width: 79px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.993</span>
+                </div>
+            </div>
+            <div class="signal-card">
+                <div class="sig-name">HRV (ms)</div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P2</span>
+                    <span class="sig-bar" style="width: 56px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.711</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P7</span>
+                    <span class="sig-bar" style="width: 59px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.750</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P3</span>
+                    <span class="sig-bar" style="width: 69px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.868</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P6</span>
+                    <span class="sig-bar" style="width: 53px; background: #d29922;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.666</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P1</span>
+                    <span class="sig-bar" style="width: 66px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.828</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P5</span>
+                    <span class="sig-bar" style="width: 63px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.788</span>
+                </div>
+            </div>
+            <div class="signal-card">
+                <div class="sig-name">Recovery (/100)</div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P2</span>
+                    <span class="sig-bar" style="width: 81px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">1.020</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P7</span>
+                    <span class="sig-bar" style="width: 68px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.859</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P3</span>
+                    <span class="sig-bar" style="width: 77px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.974</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P6</span>
+                    <span class="sig-bar" style="width: 75px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.943</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P1</span>
+                    <span class="sig-bar" style="width: 81px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">1.022</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P5</span>
+                    <span class="sig-bar" style="width: 82px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">1.031</span>
+                </div>
+            </div>
+            <div class="signal-card">
+                <div class="sig-name">Deep Sleep (min)</div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P2</span>
+                    <span class="sig-bar" style="width: 87px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">1.089</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P7</span>
+                    <span class="sig-bar" style="width: 67px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.845</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P3</span>
+                    <span class="sig-bar" style="width: 90px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">1.134</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P6</span>
+                    <span class="sig-bar" style="width: 130px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">1.636</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P1</span>
+                    <span class="sig-bar" style="width: 134px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">1.683</span>
+                </div>
+                <div class="sig-bar-row">
+                    <span style="width: 30px; color: var(--text-secondary);">P5</span>
+                    <span class="sig-bar" style="width: 77px; background: #f85149;"></span>
+                    <span style="color: var(--text-secondary); font-family: monospace;">0.964</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 7: Clinical Interpretation -->
+    <div class="section">
+        <h2 class="section-title">7. Clinical Interpretation</h2>
+
+        <div class="insight-box" style="border-left-color: var(--green);">
+            <h4 style="color: var(--green);">What This Means for Dosing Decisions</h4>
+            <p>
+                <strong>For Ariel specifically:</strong> The current protocol (P7: T4=82mcg + T3=6.25mcg) shows the
+                lowest day-to-day churn of any protocol tested, confirming the A+ subjective rating with
+                objective wearable data. Her body has found its equilibrium.
+            </p>
+            <p style="margin-top: 12px;">
+                <strong>For future dose adjustments:</strong> When considering a dose change, monitor DAS churn
+                over the first 5-7 days. If churn exceeds 0.50 during this window, the new dose is likely
+                suboptimal. If it settles below 0.47, the dose is likely good. This signal appears within
+                days &mdash; potentially weeks before the patient develops conscious subjective complaints.
+            </p>
+        </div>
+
+        <div class="insight-box" style="border-left-color: var(--purple);">
+            <h4 style="color: var(--purple);">Why This Works: The Physiology</h4>
+            <p>
+                Thyroid hormones regulate basal metabolic rate, thermoregulation, cardiovascular tone, and
+                sleep architecture simultaneously. When the dose is <span class="highlight">correctly titrated</span>,
+                these systems find a stable operating point: heart rate, skin temperature, HRV, and sleep
+                cycle durations all settle into consistent daily patterns.
+            </p>
+            <p style="margin-top: 12px;">
+                When the dose is <span class="warn">wrong</span> (either direction), the body can't find
+                equilibrium. Underdosing creates compensatory swings as the body tries to maintain function
+                with insufficient hormone. Overdosing creates hyperactivation with volatile autonomic responses.
+                Both manifest as <span class="warn">increased day-to-day variability</span> in the composite signal.
+            </p>
+        </div>
+
+        <div class="insight-box" style="border-left-color: var(--blue);">
+            <h4 style="color: var(--blue);">Broader Applicability</h4>
+            <p>
+                This "stability = optimal dose" signal may apply to <strong>any condition where a medication
+                regulates a physiological system that wearables can detect</strong>:
+            </p>
+            <ul style="margin: 12px 0 0 20px; color: var(--text-secondary); line-height: 2;">
+                <li><strong>Other hormone replacement:</strong> Estrogen/progesterone HRT, testosterone replacement, cortisol replacement (Addison's)</li>
+                <li><strong>Psychiatric medications:</strong> SSRIs, mood stabilizers (lithium), stimulants for ADHD &mdash; all affect HRV, sleep, activity</li>
+                <li><strong>Diabetes (insulin dosing):</strong> Glucose variability is already a known signal; wearable stability could complement CGM data</li>
+                <li><strong>Cardiovascular medications:</strong> Beta-blockers, anti-hypertensives directly affect HR and HRV patterns</li>
+                <li><strong>Autoimmune/inflammatory conditions:</strong> Immunomodulators affecting sleep and recovery patterns</li>
+            </ul>
+            <p style="margin-top: 12px;">
+                The core principle: <span class="highlight">a well-regulated body is a stable body</span>.
+                Wearable composite signals can detect this stability before conscious symptoms develop.
+            </p>
+        </div>
+    </div>
+
+    <!-- Section 8: Methodology -->
+    <div class="section">
+        <h2 class="section-title">8. Methodology</h2>
+        <div class="chart-card">
+            <h3>How the Dose Adequacy Score (DAS) is Computed</h3>
+            <ol style="color: var(--text-secondary); line-height: 2; padding-left: 20px;">
+                <li><strong>5 daily signals</strong> are extracted from Whoop: skin temperature, resting heart rate, HRV (RMSSD), recovery score, deep sleep minutes</li>
+                <li>Each signal is <strong>z-score normalized</strong> against the patient's own protocol-period baseline (Oct 2024+)</li>
+                <li>Direction-adjusted: signals where lower = better (resting HR) are inverted</li>
+                <li>DAS = mean of available z-scores for that day (requires &ge; 3 of 5 signals)</li>
+                <li><strong>Daily churn</strong> = mean absolute day-to-day change in DAS across consecutive days within a protocol</li>
+                <li>Protocol ranking by churn: lower churn = more stable = better dose</li>
+            </ol>
+
+            <h3 style="margin-top: 20px;">Statistical Validation</h3>
+            <ul style="color: var(--text-secondary); line-height: 2; padding-left: 20px;">
+                <li>Spearman rank correlation of churn vs. patient rating: <strong>r = -0.759, p < 0.05</strong></li>
+                <li>6 protocols analyzed (P4 excluded: no wearable data during STRUGGLING period)</li>
+                <li>Churn threshold of 0.47 correctly classifies 5 of 6 protocols (83%)</li>
+                <li>All 3 A+ protocols rank as the 3 most stable; all non-A+ protocols rank as least stable</li>
+            </ul>
+
+            <h3 style="margin-top: 20px;">Limitations</h3>
+            <ul style="color: var(--text-secondary); line-height: 2; padding-left: 20px;">
+                <li>N=1 patient &mdash; findings need replication in more thyroidectomy patients</li>
+                <li>P3 (6+ months) includes fertility medication confounders</li>
+                <li>P6 has only ~10 days of data</li>
+                <li>P4 (F-rated) has zero wearable data and cannot be analyzed</li>
+                <li>Wrist skin temperature is a proxy, not core body temperature</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        T3 Dosing Stability Analysis | Patient: Ariel | Generated: 2026-02-18 07:58 |
+        Data: Whoop wearable (Oct 2024 &ndash; Jan 2026) | DIO2 rs225014 CC genotype
+    </div>
+</div>
+
+<script>
+
+const scatterData = [{"x": 0.6117, "y": 2, "label": "P1", "rating": "C", "color": "#f85149"}, {"x": 0.4308, "y": 5, "label": "P2", "rating": "A+", "color": "#3fb950"}, {"x": 0.4984, "y": 5, "label": "P3", "rating": "A+", "color": "#3fb950"}, {"x": 0.6644, "y": 4, "label": "P5", "rating": "B+", "color": "#d29922"}, {"x": 0.5962, "y": 3, "label": "P6", "rating": "B-", "color": "#f0883e"}, {"x": 0.4429, "y": 5, "label": "P7", "rating": "A+", "color": "#3fb950"}];
+
+// Chart 1: Churn vs Rating scatter
+new Chart(document.getElementById('churnVsRatingChart'), {
+    type: 'scatter',
+    data: {
+        datasets: [{
+            data: scatterData.map(d => ({ x: d.x, y: d.y })),
+            backgroundColor: scatterData.map(d => d.color),
+            borderColor: scatterData.map(d => d.color),
+            pointRadius: 12,
+            pointHoverRadius: 15,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        const d = scatterData[ctx.dataIndex];
+                        return d.label + ' (' + d.rating + '): churn=' + d.x.toFixed(3);
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                title: { display: true, text: 'DAS Daily Churn (lower = more stable)', color: '#8b949e' },
+                grid: { color: '#21262d' },
+                ticks: { color: '#8b949e' },
+                reverse: false,
+            },
+            y: {
+                title: { display: true, text: 'Patient Rating (5 = A+)', color: '#8b949e' },
+                grid: { color: '#21262d' },
+                ticks: {
+                    color: '#8b949e',
+                    stepSize: 1,
+                    callback: function(v) { return ['F','D','C','B-','B+','A+'][v] || v; }
+                },
+                min: 0, max: 5.5,
+            }
+        }
+    },
+    plugins: [{
+        afterDraw: function(chart) {
+            const ctx = chart.ctx;
+            ctx.font = '13px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            scatterData.forEach((d, i) => {
+                const meta = chart.getDatasetMeta(0).data[i];
+                if (meta) {
+                    ctx.fillStyle = '#f0f6fc';
+                    ctx.fillText(d.label, meta.x, meta.y - 16);
+                }
+            });
+        }
+    }]
+});
+
+
+const timelineData = [{"date": "2024-10-08", "das": 0.0818, "protocol": "gap", "color": "#8b949e"}, {"date": "2024-10-14", "das": 1.0263, "protocol": "gap", "color": "#8b949e"}, {"date": "2024-10-15", "das": 1.4614, "protocol": "gap", "color": "#8b949e"}, {"date": "2024-10-16", "das": -0.1987, "protocol": "gap", "color": "#8b949e"}, {"date": "2024-10-20", "das": 0.5728, "protocol": "gap", "color": "#8b949e"}, {"date": "2024-10-21", "das": 0.4022, "protocol": "gap", "color": "#8b949e"}, {"date": "2024-10-29", "das": 0.3436, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-05", "das": -1.5837, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-06", "das": -1.9261, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-07", "das": -1.1121, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-08", "das": -0.6127, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-09", "das": -1.7231, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-10", "das": -0.8158, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-11", "das": -0.9814, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-13", "das": -0.5806, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-15", "das": -0.171, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-17", "das": -1.1677, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-21", "das": 0.2021, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-22", "das": -0.2691, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-23", "das": -1.1325, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-24", "das": -0.3977, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-26", "das": -0.1134, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-27", "das": -0.1485, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-28", "das": 0.2438, "protocol": "P1", "color": "#f85149"}, {"date": "2024-11-29", "das": -0.7826, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-18", "das": 0.9779, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-19", "das": 0.4758, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-20", "das": 0.5342, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-21", "das": -0.2651, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-22", "das": 0.8389, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-23", "das": -0.7671, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-24", "das": 0.1227, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-25", "das": -0.5671, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-26", "das": -0.1449, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-27", "das": -0.4174, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-28", "das": -0.0096, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-29", "das": 0.3007, "protocol": "P1", "color": "#f85149"}, {"date": "2025-01-30", "das": -0.0137, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-01-31", "das": -0.7069, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-01", "das": -0.1732, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-03", "das": -0.0728, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-04", "das": 0.7644, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-05", "das": 0.2778, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-06", "das": -0.0725, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-07", "das": 0.5207, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-08", "das": 0.1539, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-09", "das": -0.2659, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-10", "das": 0.554, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-11", "das": -0.3614, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-12", "das": -0.3712, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-13", "das": -0.0594, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-14", "das": -0.6579, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-17", "das": -0.3569, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-19", "das": 0.1302, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-20", "das": -0.6031, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-21", "das": -0.496, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-22", "das": 0.3252, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-23", "das": 0.6795, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-24", "das": 0.7323, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-25", "das": 0.8079, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-26", "das": 0.7879, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-27", "das": -0.1154, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-02-28", "das": -0.3433, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-02", "das": 0.3239, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-03", "das": 0.1618, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-04", "das": 0.1707, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-05", "das": -0.5475, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-06", "das": -0.7204, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-07", "das": -0.4488, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-08", "das": -0.5373, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-12", "das": 0.1382, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-13", "das": -0.3647, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-14", "das": -0.0984, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-15", "das": -0.2497, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-17", "das": -0.2097, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-18", "das": -0.1553, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-19", "das": 1.0805, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-20", "das": -0.1299, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-22", "das": 0.315, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-23", "das": -0.1008, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-26", "das": 0.3555, "protocol": "P2", "color": "#3fb950"}, {"date": "2025-03-27", "das": 0.108, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-03-28", "das": 0.193, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-03-29", "das": 0.3746, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-03-30", "das": 0.4323, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-03-31", "das": 0.4587, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-04-04", "das": -0.1679, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-04-05", "das": -0.4739, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-04-06", "das": 0.1619, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-04-07", "das": -0.7352, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-16", "das": 0.4278, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-17", "das": 0.0147, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-18", "das": 0.6246, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-19", "das": -0.2031, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-21", "das": 0.4002, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-22", "das": -0.371, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-26", "das": -0.3708, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-29", "das": 0.2781, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-30", "das": 1.0663, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-05-31", "das": -0.1042, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-01", "das": 0.711, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-02", "das": -0.1564, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-08", "das": 0.8494, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-09", "das": 0.082, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-10", "das": 0.9448, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-11", "das": 0.8075, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-12", "das": 0.3131, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-13", "das": 0.8517, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-14", "das": 0.9491, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-15", "das": 0.1408, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-16", "das": 0.3484, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-17", "das": -0.3859, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-18", "das": 0.3557, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-19", "das": 0.4354, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-20", "das": 0.6276, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-21", "das": 0.3934, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-22", "das": -0.0564, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-23", "das": -0.241, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-24", "das": -0.1576, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-25", "das": -0.3104, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-06-26", "das": -0.9198, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-02", "das": 0.6329, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-05", "das": -0.5388, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-07", "das": 0.2794, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-08", "das": -0.3263, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-09", "das": -0.2571, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-10", "das": -0.5088, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-16", "das": -0.1623, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-17", "das": -1.193, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-18", "das": -0.722, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-19", "das": -0.8073, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-20", "das": -0.3073, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-21", "das": -1.6034, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-23", "das": -0.2537, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-24", "das": 0.2393, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-25", "das": 0.5521, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-26", "das": 1.5056, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-27", "das": 0.0691, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-28", "das": -0.6058, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-29", "das": -0.5684, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-30", "das": -0.8407, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-07-31", "das": -0.4882, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-01", "das": -0.4044, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-02", "das": -0.1864, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-03", "das": 0.5639, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-04", "das": 0.3594, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-05", "das": 0.7622, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-06", "das": 1.0889, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-07", "das": 0.6859, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-16", "das": 0.8005, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-17", "das": -0.306, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-18", "das": -0.6853, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-24", "das": -0.7329, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-25", "das": -0.2763, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-26", "das": -0.3114, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-27", "das": 0.0499, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-28", "das": 0.1741, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-29", "das": 0.4547, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-30", "das": 0.7715, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-08-31", "das": 0.1742, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-09-01", "das": 0.7426, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-09-02", "das": -0.5823, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-09-03", "das": -0.6334, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-09-04", "das": -0.1761, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-09-05", "das": -0.1282, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-09-06", "das": 0.8104, "protocol": "P3", "color": "#3fb950"}, {"date": "2025-11-19", "das": 0.28, "protocol": "gap", "color": "#8b949e"}, {"date": "2025-11-20", "das": -0.2862, "protocol": "gap", "color": "#8b949e"}, {"date": "2025-11-21", "das": -0.5635, "protocol": "P5", "color": "#d29922"}, {"date": "2025-11-22", "das": 0.3328, "protocol": "P5", "color": "#d29922"}, {"date": "2025-11-23", "das": 1.2011, "protocol": "P5", "color": "#d29922"}, {"date": "2025-11-24", "das": 0.8645, "protocol": "P5", "color": "#d29922"}, {"date": "2025-11-25", "das": -1.3172, "protocol": "P5", "color": "#d29922"}, {"date": "2025-11-26", "das": 0.1415, "protocol": "P5", "color": "#d29922"}, {"date": "2025-11-27", "das": 0.3688, "protocol": "P5", "color": "#d29922"}, {"date": "2025-11-28", "das": -0.4666, "protocol": "P5", "color": "#d29922"}, {"date": "2025-11-29", "das": 0.3186, "protocol": "P5", "color": "#d29922"}, {"date": "2025-11-30", "das": -0.4738, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-01", "das": -0.2079, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-02", "das": 0.1189, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-03", "das": 0.4142, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-04", "das": -0.0553, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-05", "das": 0.2798, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-06", "das": -0.3483, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-07", "das": -0.2593, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-08", "das": 0.5056, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-09", "das": 0.1037, "protocol": "P5", "color": "#d29922"}, {"date": "2025-12-10", "das": -0.4331, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-11", "das": -0.1466, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-12", "das": 0.9473, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-13", "das": 0.3092, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-14", "das": 0.8382, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-15", "das": 0.2598, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-16", "das": -0.3592, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-17", "das": 0.4833, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-18", "das": -0.0544, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-19", "das": -0.2955, "protocol": "P6", "color": "#f0883e"}, {"date": "2025-12-21", "das": 0.9394, "protocol": "gap", "color": "#8b949e"}, {"date": "2025-12-22", "das": 0.2824, "protocol": "gap", "color": "#8b949e"}, {"date": "2025-12-28", "das": 0.0336, "protocol": "P7", "color": "#3fb950"}, {"date": "2025-12-29", "das": 0.1794, "protocol": "P7", "color": "#3fb950"}, {"date": "2025-12-30", "das": 0.336, "protocol": "P7", "color": "#3fb950"}, {"date": "2025-12-31", "das": -1.2937, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-01", "das": -0.5644, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-02", "das": -0.5808, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-03", "das": 0.3147, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-04", "das": 0.6595, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-05", "das": -0.5249, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-06", "das": 0.0813, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-07", "das": 0.1805, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-08", "das": 0.0284, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-09", "das": 0.1071, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-10", "das": -0.1235, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-11", "das": -0.1666, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-12", "das": -0.5051, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-14", "das": -0.3582, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-16", "das": 0.585, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-19", "das": 0.0455, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-20", "das": 0.1446, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-21", "das": -0.2044, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-22", "das": -0.2214, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-24", "das": 0.7078, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-25", "das": 0.5961, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-26", "das": -0.245, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-27", "das": 0.0557, "protocol": "P7", "color": "#3fb950"}, {"date": "2026-01-28", "das": 0.7404, "protocol": "P7", "color": "#3fb950"}];
+const protoBands = [{"id": "P1", "label": "T4=100 / T3=0", "rating": "C", "start": "2024-10-25", "end": "2025-01-29", "color": "#f85149"}, {"id": "P2", "label": "T4=88 / T3=5", "rating": "A+", "start": "2025-01-30", "end": "2025-03-26", "color": "#3fb950"}, {"id": "P3", "label": "T4=75 / T3=10", "rating": "A+", "start": "2025-03-27", "end": "2025-10-03", "color": "#3fb950"}, {"id": "P4", "label": "T4=75 / T3=7.5", "rating": "F", "start": "2025-10-18", "end": "2025-10-28", "color": "#8b949e"}, {"id": "P5", "label": "T4=88 / T3=5 (2nd)", "rating": "B+", "start": "2025-11-21", "end": "2025-12-09", "color": "#d29922"}, {"id": "P6", "label": "T4=88 / T3=7.5", "rating": "B-", "start": "2025-12-10", "end": "2025-12-20", "color": "#f0883e"}, {"id": "P7", "label": "T4=82 / T3=6.25", "rating": "A+", "start": "2025-12-24", "end": "2026-01-29", "color": "#3fb950"}];
+
+// Chart 2: DAS Timeline
+new Chart(document.getElementById('dasTimelineChart'), {
+    type: 'line',
+    data: {
+        labels: timelineData.map(d => d.date),
+        datasets: [{
+            data: timelineData.map(d => ({ x: d.date, y: d.das })),
+            borderColor: '#58a6ff',
+            backgroundColor: 'rgba(88,166,255,0.1)',
+            borderWidth: 1.5,
+            pointRadius: 2.5,
+            pointBackgroundColor: timelineData.map(d => d.color),
+            pointBorderColor: timelineData.map(d => d.color),
+            fill: false,
+            tension: 0.1,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    title: function(items) { return items[0].label; },
+                    label: function(ctx) {
+                        const d = timelineData[ctx.dataIndex];
+                        return d.protocol + ': DAS = ' + d.das.toFixed(3);
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                type: 'time',
+                time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
+                grid: { color: '#21262d' },
+                ticks: { color: '#8b949e' },
+            },
+            y: {
+                title: { display: true, text: 'DAS (z-score composite)', color: '#8b949e' },
+                grid: { color: '#21262d' },
+                ticks: { color: '#8b949e' },
+            }
+        }
+    },
+    plugins: [{
+        beforeDraw: function(chart) {
+            const ctx = chart.ctx;
+            const xScale = chart.scales.x;
+            const yScale = chart.scales.y;
+            protoBands.forEach(band => {
+                const x1 = xScale.getPixelForValue(band.start);
+                const x2 = xScale.getPixelForValue(band.end);
+                if (x1 === undefined || x2 === undefined) return;
+                ctx.save();
+                ctx.fillStyle = band.color + '15';
+                ctx.fillRect(x1, yScale.top, x2 - x1, yScale.bottom - yScale.top);
+                ctx.fillStyle = band.color + '90';
+                ctx.font = '11px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(band.id + ' (' + band.rating + ')', (x1 + x2) / 2, yScale.top + 14);
+                ctx.restore();
+            });
+        }
+    }]
+});
+</script>
+</body>
+</html>

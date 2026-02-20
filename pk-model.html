@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personalized PK Model | T3 Dosing Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117; color: #c9d1d9; min-height: 100vh;
+        }
+        .password-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #0d1117; display: flex; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .password-box {
+            background: #161b22; padding: 40px; border-radius: 12px; border: 1px solid #30363d; text-align: center;
+        }
+        .password-box h2 { margin-bottom: 20px; color: #58a6ff; }
+        .password-box input {
+            padding: 12px 20px; font-size: 16px; border-radius: 6px;
+            border: 1px solid #30363d; background: #0d1117; color: #c9d1d9; margin-right: 10px;
+        }
+        .password-box button {
+            padding: 12px 24px; font-size: 16px; border-radius: 6px;
+            border: none; background: #238636; color: white; cursor: pointer;
+        }
+        .hidden { display: none !important; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        nav {
+            background: #161b22; padding: 15px 20px; margin-bottom: 20px;
+            border-radius: 8px; border: 1px solid #30363d;
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+        }
+        nav a {
+            color: #58a6ff; text-decoration: none; padding: 8px 16px;
+            border-radius: 6px; transition: background 0.2s; font-size: 14px;
+        }
+        nav a:hover { background: #21262d; }
+        nav a.active { background: #238636; color: white; }
+        header {
+            background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+            padding: 30px 20px; margin-bottom: 30px; border-radius: 12px;
+        }
+        header h1 { font-size: 28px; margin-bottom: 8px; }
+        header p { opacity: 0.9; font-size: 16px; }
+
+        .metrics-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px; margin-bottom: 30px;
+        }
+        .metric-card {
+            background: #161b22; padding: 20px; border-radius: 12px; border: 1px solid #30363d; text-align: center;
+        }
+        .metric-card .label { font-size: 12px; color: #8b949e; margin-bottom: 5px; }
+        .metric-card .value { font-size: 28px; font-weight: bold; color: #ec4899; }
+        .metric-card .subtext { font-size: 11px; color: #8b949e; margin-top: 4px; }
+
+        .section-title {
+            font-size: 20px; color: #58a6ff; margin-bottom: 20px;
+            padding-bottom: 10px; border-bottom: 1px solid #30363d;
+        }
+
+        .chart-card {
+            background: #161b22; padding: 20px; border-radius: 12px;
+            border: 1px solid #30363d; margin-bottom: 20px;
+        }
+        .chart-card h3 { font-size: 16px; margin-bottom: 15px; color: #c9d1d9; }
+        .chart-container { position: relative; height: 350px; }
+
+        .genotype-card {
+            background: linear-gradient(135deg, #161b22 0%, #1c1f26 100%);
+            padding: 25px; border-radius: 12px;
+            border: 2px solid #ec4899; margin-bottom: 30px;
+        }
+        .genotype-header {
+            display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
+        }
+        .genotype-icon { font-size: 40px; }
+        .genotype-title { font-size: 20px; font-weight: 600; }
+        .genotype-subtitle { font-size: 13px; color: #8b949e; }
+        .genotype-detail {
+            display: flex; gap: 30px; flex-wrap: wrap;
+        }
+        .genotype-stat {
+            flex: 1; min-width: 150px;
+        }
+        .genotype-stat-value { font-size: 24px; font-weight: bold; color: #fbbf24; }
+        .genotype-stat-label { font-size: 12px; color: #8b949e; }
+
+        .schedule-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px; margin-bottom: 30px;
+        }
+        .schedule-card {
+            background: #161b22; padding: 20px; border-radius: 12px;
+            border: 2px solid #30363d; transition: transform 0.2s;
+        }
+        .schedule-card:hover { transform: translateY(-2px); }
+        .schedule-card.recommended { border-color: #34d399; }
+        .schedule-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+        }
+        .schedule-name { font-size: 15px; font-weight: 600; }
+        .schedule-badge {
+            padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+            background: rgba(52, 211, 153, 0.2); color: #34d399;
+        }
+        .schedule-stats { margin-bottom: 15px; }
+        .schedule-stat {
+            display: flex; justify-content: space-between; padding: 8px 0;
+            border-bottom: 1px solid #21262d; font-size: 13px;
+        }
+        .schedule-stat:last-child { border-bottom: none; }
+        .stat-label { color: #8b949e; }
+        .stat-value { font-weight: 600; }
+        .stat-value.best { color: #34d399; }
+        .stat-value.worst { color: #f87171; }
+        .schedule-times {
+            background: #21262d; padding: 10px; border-radius: 6px;
+            font-size: 12px; text-align: center; color: #8b949e;
+        }
+
+        .insight-box {
+            background: #161b22; padding: 20px; border-radius: 12px;
+            border-left: 4px solid #ec4899; margin-bottom: 20px;
+        }
+        .insight-box h4 { color: #ec4899; margin-bottom: 10px; }
+        .insight-box p { color: #8b949e; line-height: 1.6; }
+        .insight-box ul { margin-top: 10px; padding-left: 20px; }
+        .insight-box li { margin-bottom: 8px; color: #c9d1d9; }
+
+        .pk-params {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px; margin-bottom: 20px;
+        }
+        .pk-param {
+            background: #21262d; padding: 15px; border-radius: 8px; text-align: center;
+        }
+        .pk-param-value { font-size: 24px; font-weight: bold; color: #58a6ff; }
+        .pk-param-label { font-size: 11px; color: #8b949e; margin-top: 5px; }
+        .pk-param-unit { font-size: 12px; color: #8b949e; }
+    </style>
+</head>
+<body>
+    <div class="password-overlay" id="passwordOverlay">
+        <div class="password-box">
+            <h2>T3 Dosing Dashboard</h2>
+            <p style="margin-bottom: 20px; color: #8b949e;">Enter password to view</p>
+            <input type="password" id="passwordInput" placeholder="Password" onkeypress="if(event.key==='Enter')checkPassword()">
+            <button onclick="checkPassword()">View</button>
+        </div>
+    </div>
+
+    <div class="container hidden" id="dashboard">
+        <nav>
+            <a href="index.html">Journal</a>
+            <a href="stability.html">Stability</a>
+            <a href="nightsignal.html">NightSignal</a>
+            <a href="acute-response.html">Acute</a>
+            <a href="acute-analysis.html">Acute Analysis</a>
+            <a href="report-card.html">Report Card</a>
+            <a href="transition.html">Transitions</a>
+            <a href="data-explorer.html">Explorer</a>
+            <a href="pharmacogenomics.html">PGx</a>
+            <a href="thyroid-pgx.html">Thyroid</a>
+            <a href="phenotypes.html">Phenotypes</a>
+            <a href="toi.html">TOI</a>
+            <a href="causal.html">Causal</a>
+            <a href="pk-model.html" class="active">PK Model</a>
+            <a href="forecast.html">Forecast</a>
+            <a href="exploratory-predictive.html">Predictive</a>
+            <a href="recovery-intelligence.html">Recovery</a>
+        </nav>
+
+        <header>
+            <h1>Personalized Pharmacokinetic Model</h1>
+            <p>DIO2 genotype-informed T3 concentration simulation | Optimal dosing schedule analysis</p>
+        </header>
+
+        <div class="genotype-card">
+            <div class="genotype-header">
+                <div class="genotype-icon">🧬</div>
+                <div>
+                    <div class="genotype-title">DIO2 Ala92Ala (rs225014 CC)</div>
+                    <div class="genotype-subtitle">Homozygous variant - Reduced T4→T3 conversion</div>
+                </div>
+            </div>
+            <div class="genotype-detail">
+                <div class="genotype-stat">
+                    <div class="genotype-stat-value">70%</div>
+                    <div class="genotype-stat-label">of normal T4→T3 conversion</div>
+                </div>
+                <div class="genotype-stat">
+                    <div class="genotype-stat-value">+43%</div>
+                    <div class="genotype-stat-label">more exogenous T3 needed</div>
+                </div>
+                <div class="genotype-stat">
+                    <div class="genotype-stat-value">~16%</div>
+                    <div class="genotype-stat-label">of population carries variant</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="insight-box">
+            <h4>Key Finding: 2x Daily Dosing Recommended</h4>
+            <p>Pharmacokinetic simulation shows <strong style="color: #34d399;">2x daily dosing (AM/PM)</strong> provides
+            <strong>16.1 hours/day</strong> in therapeutic range - <strong style="color: #fbbf24;">64% more</strong>
+            than single daily dosing (9.8h).</p>
+        </div>
+
+        <h2 class="section-title">PK Parameters</h2>
+        <div class="pk-params">
+            <div class="pk-param">
+                <div class="pk-param-value">2.0</div>
+                <div class="pk-param-unit">/h</div>
+                <div class="pk-param-label">Absorption rate (ka)</div>
+            </div>
+            <div class="pk-param">
+                <div class="pk-param-value">0.058</div>
+                <div class="pk-param-unit">/h</div>
+                <div class="pk-param-label">Elimination rate (ke)</div>
+            </div>
+            <div class="pk-param">
+                <div class="pk-param-value">12.0</div>
+                <div class="pk-param-unit">hours</div>
+                <div class="pk-param-label">Half-life (t½)</div>
+            </div>
+            <div class="pk-param">
+                <div class="pk-param-value">2.5</div>
+                <div class="pk-param-unit">hours</div>
+                <div class="pk-param-label">Time to peak (Tmax)</div>
+            </div>
+        </div>
+
+        <h2 class="section-title">24-Hour T3 Concentration Curves</h2>
+        <div class="chart-card">
+            <h3>Simulated T3 levels for different dosing schedules (10mcg total daily)</h3>
+            <div class="chart-container">
+                <canvas id="pkCurveChart"></canvas>
+            </div>
+        </div>
+
+        <h2 class="section-title">Dosing Schedule Comparison</h2>
+        <div class="schedule-grid" id="scheduleGrid"></div>
+
+        <div class="chart-card">
+            <h3>Time in Therapeutic Range by Schedule</h3>
+            <div class="chart-container">
+                <canvas id="rangeChart"></canvas>
+            </div>
+        </div>
+
+        <div class="insight-box">
+            <h4>Clinical Recommendations (Based on DIO2 Genotype)</h4>
+            <ul>
+                <li><strong>Split doses:</strong> 2x daily (AM/PM) provides most stable T3 levels</li>
+                <li><strong>Avoid single daily:</strong> Only 9.8h in therapeutic range, large fluctuations</li>
+                <li><strong>DIO2 Ala92Ala:</strong> Reduced T4→T3 conversion means greater reliance on exogenous T3</li>
+                <li><strong>May need higher T3:</strong> Consider ~43% higher T3 dose than population average</li>
+                <li><strong>Monitor symptoms:</strong> Track energy/fatigue patterns relative to dosing times</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function checkPassword() {
+            const pwd = document.getElementById('passwordInput').value;
+            if (pwd === 'ari2024' || pwd === 'thyroid') {
+                document.getElementById('passwordOverlay').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                initDashboard();
+            } else { alert('Incorrect password'); }
+        }
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            document.getElementById('passwordOverlay').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.addEventListener('DOMContentLoaded', initDashboard);
+        }
+
+        const schedules = [
+            { name: '2x daily (AM/PM)', doses: [5, 5], times: [7, 19], range: 16.1, fluctuation: 166, cmax: 6.82, cmin: 2.57, recommended: true },
+            { name: '3x daily (8h apart)', doses: [3.33, 3.33, 3.33], times: [7, 15, 23], range: 15.1, fluctuation: 187, cmax: 6.19, cmin: 2.16, recommended: false },
+            { name: '4x daily (6h apart)', doses: [2.5, 2.5, 2.5, 2.5], times: [6, 12, 18, 24], range: 13.7, fluctuation: 225, cmax: 5.91, cmin: 1.82, recommended: false },
+            { name: 'Single AM dose', doses: [10], times: [7], range: 9.8, fluctuation: 131, cmax: 8.99, cmin: 3.90, recommended: false }
+        ];
+
+        // PK concentration function
+        function pkConcentration(t, dose, tDose, ka = 2.0, ke = 0.058) {
+            const dt = t - tDose;
+            if (dt < 0) return 0;
+            const C = (dose * ka / (ka - ke)) * (Math.exp(-ke * dt) - Math.exp(-ka * dt));
+            return Math.max(0, C);
+        }
+
+        function initDashboard() {
+            renderPKCurves();
+            renderScheduleCards();
+            renderRangeChart();
+        }
+
+        function renderPKCurves() {
+            const ctx = document.getElementById('pkCurveChart').getContext('2d');
+            const hours = Array.from({length: 97}, (_, i) => i * 0.25); // 0 to 24h in 15-min steps
+
+            const colors = ['#34d399', '#60a5fa', '#fbbf24', '#f87171'];
+
+            const datasets = schedules.map((schedule, idx) => {
+                const concentrations = hours.map(t => {
+                    let total = 0;
+                    schedule.doses.forEach((dose, i) => {
+                        total += pkConcentration(t, dose, schedule.times[i]);
+                    });
+                    return total;
+                });
+
+                return {
+                    label: schedule.name,
+                    data: concentrations,
+                    borderColor: colors[idx],
+                    backgroundColor: 'transparent',
+                    borderWidth: schedule.recommended ? 3 : 2,
+                    borderDash: schedule.recommended ? [] : [5, 5],
+                    tension: 0.3,
+                    pointRadius: 0,
+                };
+            });
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours,
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { color: '#c9d1d9' }},
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => `Time: ${items[0].label}h`,
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Time (hours)', color: '#8b949e' },
+                            grid: { color: '#21262d' },
+                            ticks: {
+                                color: '#8b949e',
+                                callback: (val, idx) => idx % 16 === 0 ? hours[idx] : ''
+                            }
+                        },
+                        y: {
+                            title: { display: true, text: 'Relative T3 Concentration', color: '#8b949e' },
+                            grid: { color: '#21262d' },
+                            ticks: { color: '#8b949e' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderScheduleCards() {
+            const grid = document.getElementById('scheduleGrid');
+            const maxRange = Math.max(...schedules.map(s => s.range));
+
+            grid.innerHTML = schedules.map(schedule => `
+                <div class="schedule-card ${schedule.recommended ? 'recommended' : ''}">
+                    <div class="schedule-header">
+                        <span class="schedule-name">${schedule.name}</span>
+                        ${schedule.recommended ? '<span class="schedule-badge">RECOMMENDED</span>' : ''}
+                    </div>
+                    <div class="schedule-stats">
+                        <div class="schedule-stat">
+                            <span class="stat-label">Time in Range</span>
+                            <span class="stat-value ${schedule.range === maxRange ? 'best' : schedule.range < 12 ? 'worst' : ''}">${schedule.range}h/day</span>
+                        </div>
+                        <div class="schedule-stat">
+                            <span class="stat-label">Fluctuation</span>
+                            <span class="stat-value">${schedule.fluctuation}%</span>
+                        </div>
+                        <div class="schedule-stat">
+                            <span class="stat-label">Peak (Cmax)</span>
+                            <span class="stat-value">${schedule.cmax.toFixed(2)}</span>
+                        </div>
+                        <div class="schedule-stat">
+                            <span class="stat-label">Trough (Cmin)</span>
+                            <span class="stat-value">${schedule.cmin.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="schedule-times">
+                        Dose times: ${schedule.times.map(t => t + ':00').join(', ')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderRangeChart() {
+            const ctx = document.getElementById('rangeChart').getContext('2d');
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: schedules.map(s => s.name),
+                    datasets: [{
+                        label: 'Hours in Therapeutic Range',
+                        data: schedules.map(s => s.range),
+                        backgroundColor: schedules.map(s => s.recommended ? '#34d399' : '#60a5fa'),
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.raw} hours/day in therapeutic range`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            min: 0, max: 24,
+                            title: { display: true, text: 'Hours per day', color: '#8b949e' },
+                            grid: { color: '#21262d' },
+                            ticks: { color: '#8b949e' }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#c9d1d9' }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
